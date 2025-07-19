@@ -1,0 +1,34 @@
+from sqlmodel import SQLModel, Field, Relationship
+from typing import Optional, List
+from datetime import datetime
+
+class GymBase(SQLModel):
+    name: str = Field(unique=True, index=True)
+    address: str
+    is_active: bool = True
+
+class Gym(GymBase, table=True):
+    __tablename__ = "gyms"
+    
+    id: Optional[int] = Field(default=None, primary_key=True)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    
+    # Relationships
+    users: List["User"] = Relationship(back_populates="gym")
+    plans: List["Plan"] = Relationship(back_populates="gym")
+    products: List["Product"] = Relationship(back_populates="gym")
+    sales: List["Sale"] = Relationship(back_populates="gym")
+
+class GymCreate(GymBase):
+    pass
+
+class GymUpdate(SQLModel):
+    name: Optional[str] = None
+    address: Optional[str] = None
+    is_active: Optional[bool] = None
+
+class GymRead(GymBase):
+    id: int
+    created_at: datetime
+    updated_at: datetime 

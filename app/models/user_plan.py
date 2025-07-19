@@ -1,0 +1,41 @@
+from sqlmodel import SQLModel, Field, Relationship
+from typing import Optional
+from datetime import datetime
+from decimal import Decimal
+
+class UserPlanBase(SQLModel):
+    user_id: int = Field(foreign_key="users.id")
+    plan_id: int = Field(foreign_key="plans.id")
+    purchased_price: Decimal = Field(max_digits=10, decimal_places=2)
+    purchased_at: datetime = Field(default_factory=datetime.utcnow)
+    expires_at: datetime
+    created_by_id: int = Field(foreign_key="users.id")  # Admin or Trainer who created this
+
+class UserPlan(UserPlanBase, table=True):
+    __tablename__ = "user_plans"
+    
+    id: Optional[int] = Field(default=None, primary_key=True)
+    is_active: bool = True
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    
+    # Relationships
+    user: Optional["User"] = Relationship(back_populates="user_plans", sa_relationship_kwargs={"foreign_keys": "[UserPlan.user_id]"})
+    plan: Optional["Plan"] = Relationship(back_populates="user_plans")
+    created_by: Optional["User"] = Relationship(back_populates="created_user_plans", sa_relationship_kwargs={"foreign_keys": "[UserPlan.created_by_id]"})
+
+class UserPlanCreate(SQLModel):
+    plan_id: int
+    purchased_price: Decimal
+    expires_at: datetime
+
+class UserPlanUpdate(SQLModel):
+    plan_id: Optional[int] = None
+    expires_at: Optional[datetime] = None
+    is_active: Optional[bool] = None
+
+class UserPlanRead(UserPlanBase):
+    id: int
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime 
