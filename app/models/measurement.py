@@ -8,26 +8,26 @@ class MeasurementBase(SQLModel):
     recorded_by_id: int = Field(foreign_key="users.id", description="Admin or trainer who recorded the measurements")
     
     # Body measurements (in cm)
-    height: Optional[Decimal] = Field(None, max_digits=5, decimal_places=2, description="Height in cm")
-    weight: Optional[Decimal] = Field(None, max_digits=5, decimal_places=2, description="Weight in kg")
+    height: Optional[Decimal] = Field(None, description="Height in cm")
+    weight: Optional[Decimal] = Field(None, description="Weight in kg")
     
     # Upper body measurements
-    chest: Optional[Decimal] = Field(None, max_digits=5, decimal_places=2, description="Chest circumference in cm")
-    shoulders: Optional[Decimal] = Field(None, max_digits=5, decimal_places=2, description="Shoulder width in cm")
-    biceps_left: Optional[Decimal] = Field(None, max_digits=5, decimal_places=2, description="Left biceps circumference in cm")
-    biceps_right: Optional[Decimal] = Field(None, max_digits=5, decimal_places=2, description="Right biceps circumference in cm")
-    forearms_left: Optional[Decimal] = Field(None, max_digits=5, decimal_places=2, description="Left forearm circumference in cm")
-    forearms_right: Optional[Decimal] = Field(None, max_digits=5, decimal_places=2, description="Right forearm circumference in cm")
+    chest: Optional[Decimal] = Field(None, description="Chest circumference in cm")
+    shoulders: Optional[Decimal] = Field(None, description="Shoulder width in cm")
+    biceps_left: Optional[Decimal] = Field(None, description="Left biceps circumference in cm")
+    biceps_right: Optional[Decimal] = Field(None, description="Right biceps circumference in cm")
+    forearms_left: Optional[Decimal] = Field(None, description="Left forearm circumference in cm")
+    forearms_right: Optional[Decimal] = Field(None, description="Right forearm circumference in cm")
     
     # Core measurements
-    abdomen: Optional[Decimal] = Field(None, max_digits=5, decimal_places=2, description="Abdomen/waist circumference in cm")
-    hips: Optional[Decimal] = Field(None, max_digits=5, decimal_places=2, description="Hip circumference in cm")
+    abdomen: Optional[Decimal] = Field(None, description="Abdomen/waist circumference in cm")
+    hips: Optional[Decimal] = Field(None, description="Hip circumference in cm")
     
     # Lower body measurements
-    thighs_left: Optional[Decimal] = Field(None, max_digits=5, decimal_places=2, description="Left thigh circumference in cm")
-    thighs_right: Optional[Decimal] = Field(None, max_digits=5, decimal_places=2, description="Right thigh circumference in cm")
-    calves_left: Optional[Decimal] = Field(None, max_digits=5, decimal_places=2, description="Left calf circumference in cm")
-    calves_right: Optional[Decimal] = Field(None, max_digits=5, decimal_places=2, description="Right calf circumference in cm")
+    thighs_left: Optional[Decimal] = Field(None, description="Left thigh circumference in cm")
+    thighs_right: Optional[Decimal] = Field(None, description="Right thigh circumference in cm")
+    calves_left: Optional[Decimal] = Field(None, description="Left calf circumference in cm")
+    calves_right: Optional[Decimal] = Field(None, description="Right calf circumference in cm")
     
     # Additional notes
     notes: Optional[str] = Field(None, description="Additional notes about the measurements")
@@ -41,8 +41,8 @@ class Measurement(MeasurementBase, table=True):
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     
     # Relationships
-    user: "User" = Relationship(back_populates="measurements")
-    recorded_by: "User" = Relationship(back_populates="recorded_measurements")
+    user: "User" = Relationship(back_populates="measurements", sa_relationship_kwargs={"foreign_keys": "[Measurement.user_id]"})
+    recorded_by: "User" = Relationship(back_populates="recorded_measurements", sa_relationship_kwargs={"foreign_keys": "[Measurement.recorded_by_id]"})
 
 class MeasurementCreate(MeasurementBase):
     pass

@@ -6,7 +6,7 @@ from decimal import Decimal
 class UserPlanBase(SQLModel):
     user_id: int = Field(foreign_key="users.id")
     plan_id: int = Field(foreign_key="plans.id")
-    purchased_price: Decimal = Field(max_digits=10, decimal_places=2)
+    purchased_price: Decimal = Field(description="Price paid for this plan")
     purchased_at: datetime = Field(default_factory=datetime.utcnow)
     expires_at: datetime
     created_by_id: int = Field(foreign_key="users.id")  # Admin or Trainer who created this

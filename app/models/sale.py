@@ -6,10 +6,10 @@ from decimal import Decimal
 class SaleBase(SQLModel):
     product_id: int = Field(foreign_key="products.id")
     quantity: int = Field(gt=0)  # Number of items sold
-    unit_price: Decimal = Field(max_digits=10, decimal_places=2)  # Price per unit at time of sale
-    total_amount: Decimal = Field(max_digits=10, decimal_places=2)  # Total amount for this sale
-    sold_by_id: int = Field(foreign_key="users.id")  # Trainer who made the sale
-    gym_id: int = Field(foreign_key="gyms.id", description="Gym where the sale occurred")
+    unit_price: Decimal = Field(description="Price per unit at time of sale")
+    total_amount: Decimal = Field(description="Total amount for this sale")
+    sold_by_id: int = Field(foreign_key="users.id")  # Admin or trainer who made the sale
+    gym_id: int = Field(foreign_key="gyms.id", description="Gym where the sale was made")
     sale_date: datetime = Field(default_factory=datetime.utcnow)
 
 class Sale(SaleBase, table=True):
@@ -20,8 +20,8 @@ class Sale(SaleBase, table=True):
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     
     # Relationships
-    product: Optional["Product"] = Relationship(back_populates="sales")
-    sold_by: Optional["User"] = Relationship(back_populates="sales")
+    product: "Product" = Relationship(back_populates="sales")
+    sold_by: "User" = Relationship(back_populates="sales")
     gym: "Gym" = Relationship(back_populates="sales")
 
 class SaleCreate(SQLModel):
@@ -32,8 +32,6 @@ class SaleCreate(SQLModel):
 class SaleUpdate(SQLModel):
     quantity: Optional[int] = None
     unit_price: Optional[Decimal] = None
-    total_amount: Optional[Decimal] = None
-    gym_id: Optional[int] = None
     sale_date: Optional[datetime] = None
 
 class SaleRead(SaleBase):

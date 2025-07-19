@@ -65,15 +65,50 @@ def check_database_connection():
             cursor.execute("SHOW TABLES")
             tables = [row[0] for row in cursor.fetchall()]
             
-            expected_tables = ['users', 'plans', 'user_plans', 'products', 'sales']
+            # All expected tables based on our models
+            expected_tables = [
+                'gyms',           # Gym model
+                'users',          # User model
+                'plans',          # Plan model
+                'user_plans',     # UserPlan model
+                'products',       # Product model
+                'sales',          # Sale model
+                'measurements',   # Measurement model
+                'attendance'      # Attendance model
+            ]
+            
+            print(f"\nChecking for {len(expected_tables)} expected tables:")
+            missing_tables = []
+            
             for table in expected_tables:
                 if table in tables:
                     print(f"✅ Table '{table}' exists")
+                    
+                    # Check table structure
+                    cursor.execute(f"DESCRIBE {table}")
+                    columns = cursor.fetchall()
+                    print(f"   - Columns: {len(columns)}")
+                    
                 else:
                     print(f"❌ Table '{table}' does not exist")
+                    missing_tables.append(table)
+            
+            if missing_tables:
+                print(f"\n❌ Missing {len(missing_tables)} tables: {', '.join(missing_tables)}")
+                print("   You need to run the database initialization:")
+                print("   python -m app.core.init_db")
+            else:
+                print(f"\n✅ All {len(expected_tables)} tables exist!")
+                
+                # Check for sample data
+                print("\nChecking for sample data:")
+                for table in expected_tables:
+                    cursor.execute(f"SELECT COUNT(*) FROM {table}")
+                    count = cursor.fetchone()[0]
+                    print(f"   - {table}: {count} records")
         
         conn.close()
-        return True
+        return len(missing_tables) == 0
         
     except Exception as e:
         print(f"❌ Failed to connect to database '{settings.DB_NAME}': {str(e)}")
@@ -109,10 +144,61 @@ def create_database_simple():
         print("   You need to create the database manually or use root access.")
         return False
 
+def test_table_operations():
+    """Test basic operations on tables"""
+    print("\n=== Testing Table Operations ===")
+    
+    try:
+        conn = pymysql.connect(
+            host=settings.DB_HOST,
+            user=settings.DB_USER,
+            password=settings.DB_PASSWORD,
+            database=settings.DB_NAME,
+            port=int(settings.DB_PORT)
+        )
+        
+        with conn.cursor() as cursor:
+            # Test inserting and selecting from gyms table
+            print("Testing gyms table operations...")
+            cursor.execute("INSERT INTO gyms (name, address, is_active) VALUES ('Test Gym', 'Test Address', 1)")
+            cursor.execute("SELECT * FROM gyms WHERE name = 'Test Gym'")
+            result = cursor.fetchone()
+            if result:
+                print("✅ Successfully inserted and retrieved from gyms table")
+                # Clean up test data
+                cursor.execute("DELETE FROM gyms WHERE name = 'Test Gym'")
+            else:
+                print("❌ Failed to retrieve data from gyms table")
+            
+            conn.commit()
+        
+        conn.close()
+        return True
+        
+    except Exception as e:
+        print(f"❌ Table operations test failed: {str(e)}")
+        return False
+
 if __name__ == "__main__":
+    print("Starting database diagnostic...")
     success = check_database_connection()
     
-    if not success:
+    if success:
+        print("\n" + "="*50)
+        print("DATABASE IS READY!")
+        print("="*50)
+        print("✅ Database connection successful")
+        print("✅ All tables exist")
+        print("✅ Ready to run the application")
+        print()
+        print("You can now start the application with:")
+        print("   uvicorn main:app --reload")
+        print()
+        
+        # Test table operations
+        test_table_operations()
+        
+    else:
         print("\n" + "="*50)
         print("MANUAL SETUP REQUIRED")
         print("="*50)
@@ -138,4 +224,5 @@ if __name__ == "__main__":
         print("   python -m app.core.init_db")
         print()
         print("7. Start the application:")
-        print("   python start.py") 
+        print("   uvicorn main:app --reload")
+        print() 

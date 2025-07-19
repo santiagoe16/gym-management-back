@@ -5,7 +5,7 @@ from decimal import Decimal
 
 class ProductBase(SQLModel):
     name: str = Field(unique=True, index=True)
-    price: Decimal = Field(max_digits=10, decimal_places=2)
+    price: Decimal = Field(description="Product price")
     quantity: int = Field(ge=0)  # Number of items in inventory
     gym_id: int = Field(foreign_key="gyms.id", description="Gym where this product is available")
     is_active: bool = True

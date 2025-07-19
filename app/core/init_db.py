@@ -5,6 +5,9 @@ from app.models.user import User, UserRole
 from app.models.plan import Plan
 from app.models.user_plan import UserPlan
 from app.models.product import Product
+from app.models.sale import Sale
+from app.models.measurement import Measurement
+from app.models.attendance import Attendance
 from app.models.gym import Gym
 from decimal import Decimal
 

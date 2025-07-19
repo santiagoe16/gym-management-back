@@ -5,7 +5,7 @@ from decimal import Decimal
 
 class PlanBase(SQLModel):
     name: str = Field(unique=True, index=True)
-    price: Decimal = Field(max_digits=10, decimal_places=2)
+    price: Decimal = Field(description="Plan price")
     duration_days: int = Field(gt=0)  # Duration in days
     gym_id: int = Field(foreign_key="gyms.id", description="Gym where this plan is available")
     is_active: bool = True
