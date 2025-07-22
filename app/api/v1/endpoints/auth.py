@@ -37,7 +37,16 @@ def login(login_data: LoginRequest, session: Session = Depends(get_session)):
     # Create access token without expiration - user stays logged in until logout
     access_token = create_access_token(data={"sub": user.email})
     
-    return {"access_token": access_token, "token_type": "bearer", "role": user.role}
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": {
+            "role": user.role,
+            "id": user.id,
+            "name": user.full_name,
+            "email": user.email
+        }
+    }
 
 @router.get("/me")
 def read_users_me(current_user: User = Depends(get_current_active_user)):

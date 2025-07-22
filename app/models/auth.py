@@ -5,7 +5,7 @@ from app.models.user import UserRole
 class Token(SQLModel):
     access_token: str
     token_type: str = "bearer"
-    role: UserRole
+    user: dict  # user: {role, id, name, email}
 
 class TokenData(SQLModel):
     email: Optional[str] = None
