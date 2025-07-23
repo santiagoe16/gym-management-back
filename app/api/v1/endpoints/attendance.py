@@ -5,7 +5,7 @@ from app.core.database import get_session
 from app.core.deps import get_current_active_user, require_admin, require_trainer_or_admin
 from app.models.user import User, UserRole
 from app.models.attendance import Attendance, AttendanceCreate, AttendanceUpdate, AttendanceRead
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
 
 router = APIRouter()
 
@@ -207,15 +207,13 @@ def create_attendance(
             detail="Attendance record already exists for this user on this date"
         )
     
-    # Create attendance record
-    db_attendance = Attendance(
-        user_id=attendance.user_id,
-        attendance_date=attendance.attendance_date,
-        check_in_time=attendance.check_in_time,
-        check_out_time=attendance.check_out_time,
-        notes=attendance.notes,
-        recorded_by_id=current_user.id
-    )
+    # Create attendance record with all required fields
+    attendance_data = attendance.model_dump()
+    attendance_data.update({
+        "recorded_by_id": current_user.id
+    })
+    
+    db_attendance = Attendance.model_validate(attendance_data)
     
     session.add(db_attendance)
     session.commit()
@@ -254,11 +252,11 @@ def update_attendance(
         )
     
     # Update attendance record
-    update_data = attendance_update.dict(exclude_unset=True)
+    update_data = attendance_update.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(db_attendance, field, value)
     
-    db_attendance.updated_at = datetime.utcnow()
+    db_attendance.updated_at = datetime.now(timezone.utc)
     session.add(db_attendance)
     session.commit()
     session.refresh(db_attendance)

@@ -1,7 +1,10 @@
 from enum import Enum
 from sqlmodel import SQLModel, Field, Relationship
-from typing import Optional, List
-from datetime import datetime
+from typing import Optional, List, Annotated
+from datetime import datetime, timezone
+
+from app.models.gym import GymRead
+from app.models.user_plan import UserPlanRead
 
 class UserRole(str, Enum):
     ADMIN = "admin"
@@ -22,12 +25,12 @@ class User(UserBase, table=True):
     
     id: Optional[int] = Field(default=None, primary_key=True)
     hashed_password: Optional[str] = None  # Only for admin and trainer users
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     
     # Relationships
     gym: "Gym" = Relationship(back_populates="users")
-    user_plans: List["UserPlan"] = Relationship(back_populates="user", sa_relationship_kwargs={"foreign_keys": "[UserPlan.user_id]"})
+    user_plans: List["UserPlan"] = Relationship(back_populates="user", sa_relationship_kwargs={"foreign_keys": "[UserPlan.user_id]", "order_by": "[UserPlan.purchased_at]"})
     created_user_plans: List["UserPlan"] = Relationship(back_populates="created_by", sa_relationship_kwargs={"foreign_keys": "[UserPlan.created_by_id]"})
     sales: List["Sale"] = Relationship(back_populates="sold_by")
     measurements: List["Measurement"] = Relationship(back_populates="user", sa_relationship_kwargs={"foreign_keys": "[Measurement.user_id]"})
@@ -60,6 +63,10 @@ class UserRead(UserBase):
     id: int
     created_at: datetime
     updated_at: datetime
+    gym: Optional["GymRead"] = Field(default=None)
+    active_plan: Optional["UserPlanRead"] = Field(default=None)
+
 
 class UserReadWithPlans(UserRead):
-    user_plans: List["UserPlanRead"] = [] 
+    user_plans: List["UserPlanRead"] = Field(default=[])
+    pass 

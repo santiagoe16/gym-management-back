@@ -44,7 +44,7 @@ def read_measurements(
     # Add user and recorded_by names
     result = []
     for measurement in measurements:
-        measurement_dict = measurement.dict()
+        measurement_dict = measurement.model_dump()
         measurement_dict["user_name"] = measurement.user.full_name if measurement.user else None
         measurement_dict["recorded_by_name"] = measurement.recorded_by.full_name if measurement.recorded_by else None
         result.append(MeasurementReadWithUser(**measurement_dict))
@@ -212,26 +212,7 @@ def create_measurement(
         )
     
     # Create new measurement
-    db_measurement = Measurement(
-        user_id=measurement.user_id,
-        recorded_by_id=current_user.id,
-        height=measurement.height,
-        weight=measurement.weight,
-        chest=measurement.chest,
-        shoulders=measurement.shoulders,
-        biceps_left=measurement.biceps_left,
-        biceps_right=measurement.biceps_right,
-        forearms_left=measurement.forearms_left,
-        forearms_right=measurement.forearms_right,
-        abdomen=measurement.abdomen,
-        hips=measurement.hips,
-        thighs_left=measurement.thighs_left,
-        thighs_right=measurement.thighs_right,
-        calves_left=measurement.calves_left,
-        calves_right=measurement.calves_right,
-        notes=measurement.notes,
-        measurement_date=measurement.measurement_date
-    )
+    db_measurement = Measurement.model_validate(measurement)
     
     session.add(db_measurement)
     session.commit()

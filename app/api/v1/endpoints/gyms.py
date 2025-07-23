@@ -37,6 +37,7 @@ def create_gym(
     """Create a new gym - Admin access only"""
     # Check if gym already exists
     existing_gym = session.exec(select(Gym).where(Gym.name == gym.name)).first()
+
     if existing_gym:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -44,13 +45,7 @@ def create_gym(
         )
     
     # Create new gym
-    db_gym = Gym(
-        name=gym.name,
-        address=gym.address,
-        phone_number=gym.phone_number,
-        email=gym.email,
-        is_active=gym.is_active
-    )
+    db_gym = Gym.model_validate(gym)
     
     session.add(db_gym)
     session.commit()
@@ -82,7 +77,7 @@ def update_gym(
         raise HTTPException(status_code=404, detail="Gym not found")
     
     # Update gym data
-    gym_data = gym_update.dict(exclude_unset=True)
+    gym_data = gym_update.model_dump(exclude_unset=True)
     for key, value in gym_data.items():
         setattr(db_gym, key, value)
     
@@ -99,11 +94,14 @@ def delete_gym(
 ):
     """Delete a gym - Admin access only"""
     db_gym = session.exec(select(Gym).where(Gym.id == gym_id)).first()
+
     if db_gym is None:
         raise HTTPException(status_code=404, detail="Gym not found")
     
     # Check if gym has any users, plans, products, or sales
-    users_count = session.exec(select(User).where(User.gym_id == gym_id)).count()
+    users = session.exec(select(User).where(User.gym_id == gym_id)).all()
+    users_count = len(users)
+
     if users_count > 0:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -112,4 +110,5 @@ def delete_gym(
     
     session.delete(db_gym)
     session.commit()
+    
     return {"message": "Gym deleted successfully"} 

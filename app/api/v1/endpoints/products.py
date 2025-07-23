@@ -64,13 +64,7 @@ def create_product(
             detail="Product with this name already exists"
         )
     
-    db_product = Product(
-        name=product.name,
-        price=product.price,
-        quantity=product.quantity,
-        gym_id=product.gym_id,
-        is_active=product.is_active
-    )
+    db_product = Product.model_validate(product)
     
     session.add(db_product)
     session.commit()
@@ -102,7 +96,7 @@ def update_product(
         raise HTTPException(status_code=404, detail="Product not found")
     
     # Update product data
-    product_data = product_update.dict(exclude_unset=True)
+    product_data = product_update.model_dump(exclude_unset=True)
     for key, value in product_data.items():
         setattr(db_product, key, value)
     

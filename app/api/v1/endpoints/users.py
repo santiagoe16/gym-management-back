@@ -1,6 +1,8 @@
+from datetime import timezone
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlmodel import Session, select
+from sqlalchemy.orm import selectinload
 from app.core.database import get_session
 from app.core.security import get_password_hash
 from app.core.deps import get_current_active_user, require_admin, require_trainer_or_admin
@@ -10,8 +12,16 @@ from app.models.user_plan import UserPlan, UserPlanCreate
 from app.models.gym import Gym
 from datetime import datetime, timedelta
 from decimal import Decimal
+from app.models.gym import GymRead
+from app.models.user_plan import UserPlanRead
 
 router = APIRouter()
+
+def get_last_plan( user ):
+    for user_plan in user.user_plans:
+        return user_plan
+    
+    return None
 
 @router.get("/", response_model=List[UserRead])
 def read_users(
@@ -22,7 +32,10 @@ def read_users(
     current_user: User = Depends(require_trainer_or_admin)
 ):
     """Get all users - Admin and Trainer access only"""
-    query = select(User)
+    query = select(User).options(
+        selectinload(User.gym),
+        selectinload(User.user_plans).selectinload(UserPlan.plan)
+    )
     
     # Filter by gym if specified
     if gym_id:
@@ -33,7 +46,16 @@ def read_users(
         query = query.where(User.gym_id == current_user.gym_id)
     
     users = session.exec(query.offset(skip).limit(limit)).all()
-    return users
+
+    user_list = []
+
+    for user in users:
+        user_data = UserRead.model_validate(user)
+        last_plan = get_last_plan(user)
+        user_data.active_plan = UserPlanRead.model_validate(last_plan) if last_plan else None
+        user_list.append(user_data)
+
+    return user_list
 
 @router.post("/admin-trainer", response_model=UserRead)
 def create_admin_or_trainer(
@@ -75,15 +97,8 @@ def create_admin_or_trainer(
     
     # Create new user with password
     hashed_password = get_password_hash(user.password)
-    db_user = User(
-        email=user.email,
-        full_name=user.full_name,
-        document_id=user.document_id,
-        phone_number=user.phone_number,
-        gym_id=user.gym_id,
-        role=user.role,
-        hashed_password=hashed_password
-    )
+    db_user = User.model_validate(user)
+    db_user.hashed_password = hashed_password
     
     session.add(db_user)
     session.commit()
@@ -147,15 +162,8 @@ def create_user_with_plan(
         )
     
     # Create new user without password (regular users don't log in)
-    db_user = User(
-        email=user.email,
-        full_name=user.full_name,
-        document_id=user.document_id,
-        phone_number=user.phone_number,
-        gym_id=user.gym_id,
-        role=user.role,
-        hashed_password=None  # Regular users don't need passwords
-    )
+    db_user = User.model_validate(user)
+    db_user.hashed_password = None
     
     session.add(db_user)
     session.commit()
@@ -163,7 +171,7 @@ def create_user_with_plan(
     
     # Create user plan
     purchased_price = Decimal(str(user.purchased_price)) if user.purchased_price else plan.price
-    expires_at = datetime.utcnow() + timedelta(days=plan.duration_days)
+    expires_at = datetime.now(timezone.utc) + timedelta(days=plan.duration_days)
     
     user_plan = UserPlan(
         user_id=db_user.id,
@@ -175,8 +183,12 @@ def create_user_with_plan(
     
     session.add(user_plan)
     session.commit()
+
+    user_read = UserRead.model_validate(db_user)
+    last_plan = get_last_plan(user)
+    user_read.active_plan = UserPlanRead.model_validate(last_plan) if last_plan else None
     
-    return db_user
+    return user_read
 
 @router.get("/search/document/{document_id}", response_model=UserRead)
 def search_user_by_document_id(
@@ -186,7 +198,10 @@ def search_user_by_document_id(
     current_user: User = Depends(require_trainer_or_admin)
 ):
     """Search user by document ID - Admin and Trainer access only"""
-    query = select(User).where(User.document_id == document_id)
+    query = select(User).where(User.document_id == document_id).options(
+        selectinload(User.gym),
+        selectinload(User.user_plans).selectinload(UserPlan.plan)
+    )
     
     # Filter by gym if specified
     if gym_id:
@@ -197,9 +212,15 @@ def search_user_by_document_id(
         query = query.where(User.gym_id == current_user.gym_id)
     
     user = session.exec(query).first()
+
     if user is None:
         raise HTTPException(status_code=404, detail="User not found with this document ID")
-    return user
+    
+    user_data = UserRead.model_validate(user)
+    last_plan = get_last_plan(user)
+    user_data.active_plan = UserPlanRead.model_validate(last_plan) if last_plan else None
+
+    return user_data
 
 @router.get("/search/phone/{phone_number}", response_model=List[UserRead])
 def search_users_by_phone(
@@ -209,7 +230,10 @@ def search_users_by_phone(
     current_user: User = Depends(require_trainer_or_admin)
 ):
     """Search users by phone number (partial match) - Admin and Trainer access only"""
-    query = select(User).where(User.phone_number.contains(phone_number))
+    query = select(User).where(User.phone_number.contains(phone_number)).options(
+        selectinload(User.gym),
+        selectinload(User.user_plans).selectinload(UserPlan.plan)
+    )
     
     # Filter by gym if specified
     if gym_id:
@@ -222,7 +246,16 @@ def search_users_by_phone(
     users = session.exec(query).all()
     if not users:
         raise HTTPException(status_code=404, detail="No users found with this phone number")
-    return users
+    
+    user_list = []
+
+    for user in users:
+        user_data = UserRead.model_validate(user)
+        last_plan = get_last_plan(user)
+        user_data.active_plan = UserPlanRead.model_validate(last_plan) if last_plan else None
+        user_list.append(user_data)
+
+    return user_list
 
 @router.get("/{user_id}", response_model=UserRead)
 def read_user(
@@ -231,10 +264,22 @@ def read_user(
     current_user: User = Depends(require_trainer_or_admin)
 ):
     """Get a specific user - Admin and Trainer access only"""
-    user = session.exec(select(User).where(User.id == user_id)).first()
+    query = select( User ).where( User.id == user_id ).options(
+        selectinload(User.gym),
+        selectinload(User.user_plans).selectinload(UserPlan.plan)
+    )
+
+    user = session.exec(query).first()
+
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
-    return user
+    
+    user_data = UserRead.model_validate(user)
+
+    last_plan = get_last_plan(user)
+    user_data.active_plan = UserPlanRead.model_validate(last_plan) if last_plan else None
+    
+    return user_data
 
 @router.put("/{user_id}", response_model=UserRead)
 def update_user(
@@ -296,7 +341,7 @@ def update_user(
             )
     
     # Update user data
-    user_data = user_update.dict(exclude_unset=True)
+    user_data = user_update.model_dump(exclude_unset=True)
     for key, value in user_data.items():
         setattr(db_user, key, value)
     
@@ -316,6 +361,45 @@ def delete_user(
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
     
+    # Check if user has any related data that would prevent deletion
+    from app.models.user_plan import UserPlan
+    from app.models.sale import Sale
+    from app.models.measurement import Measurement
+    from app.models.attendance import Attendance
+    
+    # Check user plans
+    user_plans = session.exec(select(UserPlan).where(UserPlan.user_id == user_id)).all()
+    if user_plans:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot delete user with existing plans. Deactivate the user instead."
+        )
+    
+    # Check sales
+    sales = session.exec(select(Sale).where(Sale.sold_by_id == user_id)).all()
+    if sales:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot delete user with existing sales records. Deactivate the user instead."
+        )
+    
+    # Check measurements
+    measurements = session.exec(select(Measurement).where(Measurement.user_id == user_id)).all()
+    if measurements:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot delete user with existing measurements. Deactivate the user instead."
+        )
+    
+    # Check attendance records
+    attendance = session.exec(select(Attendance).where(Attendance.user_id == user_id)).all()
+    if attendance:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot delete user with existing attendance records. Deactivate the user instead."
+        )
+    
+    # If no related data, safe to delete
     session.delete(db_user)
     session.commit()
     return {"message": "User deleted successfully"}
@@ -327,7 +411,9 @@ def read_trainers(
     current_user: User = Depends(require_trainer_or_admin)
 ):
     """Get all trainers - Admin and Trainer access only"""
-    query = select(User).where(User.role == UserRole.TRAINER)
+    query = select(User).where(User.role == UserRole.TRAINER).options(
+        selectinload(User.gym)
+    )
     
     # Filter by gym if specified
     if gym_id:
@@ -347,7 +433,10 @@ def read_regular_users(
     current_user: User = Depends(require_trainer_or_admin)
 ):
     """Get all regular users - Admin and Trainer access only"""
-    query = select(User).where(User.role == UserRole.USER)
+    query = select(User).where(User.role == UserRole.USER).options(
+        selectinload(User.gym),
+        selectinload(User.user_plans).selectinload(UserPlan.plan)
+    )
     
     # Filter by gym if specified
     if gym_id:
@@ -356,6 +445,15 @@ def read_regular_users(
     # If trainer, only show users from their gym
     if current_user.role == UserRole.TRAINER:
         query = query.where(User.gym_id == current_user.gym_id)
-    
-    users = session.exec(query).all()
-    return users 
+
+    users = session.exec( query ).all()
+
+    user_list = []
+
+    for user in users:
+        user_data = UserRead.model_validate(user)
+        last_plan = get_last_plan(user)
+        user_data.active_plan = UserPlanRead.model_validate(last_plan) if last_plan else None
+        user_list.append(user_data)
+
+    return user_list 

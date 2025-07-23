@@ -44,13 +44,7 @@ def create_plan(
             detail="Plan with this name already exists"
         )
     
-    db_plan = Plan(
-        name=plan.name,
-        description=plan.description,
-        base_price=plan.base_price,
-        duration_days=plan.duration_days,
-        is_active=plan.is_active
-    )
+    db_plan = Plan.model_validate(plan)
     
     session.add(db_plan)
     session.commit()
@@ -82,7 +76,7 @@ def update_plan(
         raise HTTPException(status_code=404, detail="Plan not found")
     
     # Update plan data
-    plan_data = plan_update.dict(exclude_unset=True)
+    plan_data = plan_update.model_dump(exclude_unset=True)
     for key, value in plan_data.items():
         setattr(db_plan, key, value)
     

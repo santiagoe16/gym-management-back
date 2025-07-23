@@ -1,3 +1,4 @@
+from time import timezone
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlmodel import Session, select
@@ -6,7 +7,7 @@ from app.core.deps import get_current_active_user, require_admin, require_traine
 from app.models.user import User, UserRole
 from app.models.plan import Plan
 from app.models.user_plan import UserPlan, UserPlanCreate, UserPlanUpdate, UserPlanRead
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from decimal import Decimal
 
 router = APIRouter()
@@ -100,57 +101,6 @@ def read_user_active_plan(
     
     return active_plan
 
-@router.post("/", response_model=UserPlanRead)
-def create_user_plan(
-    user_plan: UserPlanCreate,
-    session: Session = Depends(get_session),
-    current_user: User = Depends(require_trainer_or_admin)
-):
-    """Create a new user plan - Admin and Trainer access only"""
-    # Get the user
-    user = session.exec(select(User).where(User.id == user_plan.user_id)).first()
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
-        )
-    
-    # If trainer, only allow creating plans for users in their gym
-    if current_user.role == UserRole.TRAINER and user.gym_id != current_user.gym_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You can only create plans for users in your own gym"
-        )
-    
-    # Get the plan
-    plan = session.exec(select(Plan).where(Plan.id == user_plan.plan_id)).first()
-    if not plan:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Plan not found"
-        )
-    
-    # Verify plan belongs to the same gym as user
-    if plan.gym_id != user.gym_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Plan does not belong to the same gym as the user"
-        )
-    
-    # Create user plan
-    db_user_plan = UserPlan(
-        user_id=user_plan.user_id,
-        plan_id=user_plan.plan_id,
-        purchased_price=user_plan.purchased_price,
-        expires_at=user_plan.expires_at,
-        created_by_id=current_user.id
-    )
-    
-    session.add(db_user_plan)
-    session.commit()
-    session.refresh(db_user_plan)
-    return db_user_plan
-
 @router.put("/{user_plan_id}", response_model=UserPlanRead)
 def update_user_plan(
     user_plan_id: int,
@@ -188,7 +138,7 @@ def update_user_plan(
         current_plan = session.exec(select(Plan).where(Plan.id == db_user_plan.plan_id)).first()
         
         # Check if plan is expired
-        is_expired = db_user_plan.expires_at < datetime.utcnow()
+        is_expired = db_user_plan.expires_at < datetime.now(timezone.utc)
         
         # Check if it's an upgrade (new plan has longer duration or higher price)
         is_upgrade = False
@@ -210,11 +160,11 @@ def update_user_plan(
             )
     
     # Update the user plan
-    update_data = user_plan_update.dict(exclude_unset=True)
+    update_data = user_plan_update.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(db_user_plan, field, value)
     
-    db_user_plan.updated_at = datetime.utcnow()
+    db_user_plan.updated_at = datetime.now(timezone.utc)
     session.add(db_user_plan)
     session.commit()
     session.refresh(db_user_plan)

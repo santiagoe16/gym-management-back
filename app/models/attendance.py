@@ -1,6 +1,6 @@
 from sqlmodel import SQLModel, Field, Relationship
 from typing import Optional
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 
 class AttendanceBase(SQLModel):
     user_id: int = Field(foreign_key="users.id", description="User who attended")
@@ -14,8 +14,8 @@ class Attendance(AttendanceBase, table=True):
     __tablename__ = "attendance"
     
     id: Optional[int] = Field(default=None, primary_key=True)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     
     # Relationships
     user: "User" = Relationship(back_populates="attendance_records", sa_relationship_kwargs={"foreign_keys": "[Attendance.user_id]"})

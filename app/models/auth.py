@@ -1,11 +1,11 @@
 from sqlmodel import SQLModel
 from typing import Optional
-from app.models.user import UserRole
+from app.models.user import UserBase
 
 class Token(SQLModel):
     access_token: str
     token_type: str = "bearer"
-    role: UserRole
+    user: UserBase
 
 class TokenData(SQLModel):
     email: Optional[str] = None

@@ -1,6 +1,6 @@
 from sqlmodel import SQLModel, Field, Relationship
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 
 class MeasurementBase(SQLModel):
@@ -31,14 +31,14 @@ class MeasurementBase(SQLModel):
     
     # Additional notes
     notes: Optional[str] = Field(None, description="Additional notes about the measurements")
-    measurement_date: datetime = Field(default_factory=datetime.utcnow, description="Date when measurements were taken")
+    measurement_date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="Date when measurements were taken")
 
 class Measurement(MeasurementBase, table=True):
     __tablename__ = "measurements"
     
     id: Optional[int] = Field(default=None, primary_key=True)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     
     # Relationships
     user: "User" = Relationship(back_populates="measurements", sa_relationship_kwargs={"foreign_keys": "[Measurement.user_id]"})

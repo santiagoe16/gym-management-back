@@ -12,6 +12,9 @@ router = APIRouter()
 
 @router.post("/login", response_model=Token)
 def login(login_data: LoginRequest, session: Session = Depends(get_session)):
+    # Debug breakpoint - uncomment the next line to pause execution
+    # import pdb; pdb.set_trace()
+    
     # Only Admin and Trainer can login
     user = session.exec(select(User).where(User.email == login_data.email)).first()
     
@@ -36,8 +39,8 @@ def login(login_data: LoginRequest, session: Session = Depends(get_session)):
     
     # Create access token without expiration - user stays logged in until logout
     access_token = create_access_token(data={"sub": user.email})
-    
-    return {"access_token": access_token, "token_type": "bearer", "role": user.role}
+
+    return Token( access_token = access_token, token_type = "bearer", user = user)
 
 @router.get("/me")
 def read_users_me(current_user: User = Depends(get_current_active_user)):

@@ -6,7 +6,7 @@ from app.core.deps import get_current_active_user, require_admin, require_traine
 from app.models.user import User, UserRole
 from app.models.product import Product
 from app.models.sale import Sale, SaleCreate, SaleRead, SaleUpdate, SaleReadWithDetails
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from decimal import Decimal
 
 router = APIRouter()
@@ -36,16 +36,16 @@ def create_sale(
     # Calculate total amount
     total_amount = product.price * sale.quantity
     
-    # Create sale record
-    db_sale = Sale(
-        product_id=sale.product_id,
-        quantity=sale.quantity,
-        unit_price=product.price,
-        total_amount=total_amount,
-        sold_by_id=current_user.id,
-        gym_id=product.gym_id,
-        sale_date=datetime.utcnow()
-    )
+    # Create sale record with all required fields
+    sale_data = sale.model_dump()
+    sale_data.update({
+        "total_amount": total_amount,
+        "sold_by_id": current_user.id,
+        "gym_id": current_user.gym_id,
+        "unit_price": sale.unit_price or product.price
+    })
+    
+    db_sale = Sale.model_validate(sale_data)
     
     # Update product stock
     product.quantity -= sale.quantity
@@ -90,7 +90,7 @@ def read_sales(
     # Add product and trainer names
     result = []
     for sale in sales:
-        sale_dict = sale.dict()
+        sale_dict = sale.model_dump()
         sale_dict["product_name"] = sale.product.name if sale.product else None
         sale_dict["trainer_name"] = sale.sold_by.full_name if sale.sold_by else None
         result.append(SaleReadWithDetails(**sale_dict))
@@ -119,7 +119,7 @@ def read_daily_sales(
     # Add product and trainer names
     result = []
     for sale in sales:
-        sale_dict = sale.dict()
+        sale_dict = sale.model_dump()
         sale_dict["product_name"] = sale.product.name if sale.product else None
         sale_dict["trainer_name"] = sale.sold_by.full_name if sale.sold_by else None
         result.append(SaleReadWithDetails(**sale_dict))
@@ -183,7 +183,7 @@ def read_sale(
             detail="You can only view your own sales"
         )
     
-    sale_dict = sale.dict()
+    sale_dict = sale.model_dump()
     sale_dict["product_name"] = sale.product.name if sale.product else None
     sale_dict["trainer_name"] = sale.sold_by.full_name if sale.sold_by else None
     
@@ -202,7 +202,7 @@ def update_sale(
         raise HTTPException(status_code=404, detail="Sale not found")
     
     # Update sale data
-    sale_data = sale_update.dict(exclude_unset=True)
+    sale_data = sale_update.model_dump(exclude_unset=True)
     for key, value in sale_data.items():
         setattr(db_sale, key, value)
     
