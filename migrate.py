@@ -9,10 +9,16 @@ import sys
 import os
 from pathlib import Path
 
-def run_command(command):
+def run_command(command, args=None):
     """Run a shell command and return the result"""
     try:
-        result = subprocess.run(command, shell=True, check=True, capture_output=True, text=True)
+        if args:
+            # Use list format for better argument handling
+            full_command = [command] + args
+            result = subprocess.run(full_command, check=True, capture_output=True, text=True)
+        else:
+            # Use shell format for simple commands
+            result = subprocess.run(command, shell=True, check=True, capture_output=True, text=True)
         return result.stdout
     except subprocess.CalledProcessError as e:
         print(f"❌ Error running command: {command}")
@@ -40,11 +46,11 @@ def main():
     if command == "init":
         print("🔧 Initializing database with current schema...")
         # Create initial migration
-        result = run_command("alembic revision --autogenerate -m 'Initial migration'")
+        result = run_command("alembic", ["revision", "--autogenerate", "-m", "Initial migration"])
         if result:
             print("✅ Initial migration created")
             print("📝 Applying migration...")
-            run_command("alembic upgrade head")
+            run_command("alembic", ["upgrade", "head"])
             print("✅ Database initialized successfully!")
         else:
             print("❌ Failed to create initial migration")
@@ -57,7 +63,7 @@ def main():
         
         message = sys.argv[2]
         print(f"📝 Creating migration: {message}")
-        result = run_command(f"alembic revision --autogenerate -m '{message}'")
+        result = run_command("alembic", ["revision", "--autogenerate", "-m", message])
         if result:
             print("✅ Migration created successfully!")
             print("💡 Run 'python migrate.py upgrade' to apply the migration")
@@ -66,7 +72,7 @@ def main():
 
     elif command == "upgrade":
         print("⬆️  Applying pending migrations...")
-        result = run_command("alembic upgrade head")
+        result = run_command("alembic", ["upgrade", "head"])
         if result:
             print("✅ Migrations applied successfully!")
         else:
@@ -74,7 +80,7 @@ def main():
 
     elif command == "downgrade":
         print("⬇️  Rolling back last migration...")
-        result = run_command("alembic downgrade -1")
+        result = run_command("alembic", ["downgrade", "-1"])
         if result:
             print("✅ Migration rolled back successfully!")
         else:
@@ -82,7 +88,7 @@ def main():
 
     elif command == "history":
         print("📚 Migration history:")
-        result = run_command("alembic history")
+        result = run_command("alembic", ["history"])
         if result:
             print(result)
         else:
@@ -90,7 +96,7 @@ def main():
 
     elif command == "current":
         print("📍 Current migration:")
-        result = run_command("alembic current")
+        result = run_command("alembic", ["current"])
         if result:
             print(result)
         else:
@@ -98,11 +104,18 @@ def main():
 
     elif command == "status":
         print("📊 Migration status:")
-        result = run_command("alembic show")
+        result = run_command("alembic", ["current"])
         if result:
-            print(result)
+            print(f"Current revision: {result.strip()}")
         else:
-            print("❌ Failed to get migration status")
+            print("❌ Failed to get current migration")
+        
+        # Check for pending migrations
+        result = run_command("alembic", ["heads"])
+        if result:
+            print(f"Latest revision: {result.strip()}")
+        else:
+            print("❌ Failed to get latest migration")
 
     else:
         print(f"❌ Unknown command: {command}")

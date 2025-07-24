@@ -160,7 +160,7 @@ def test_table_operations():
         with conn.cursor() as cursor:
             # Test inserting and selecting from gyms table
             print("Testing gyms table operations...")
-            cursor.execute("INSERT INTO gyms (name, address, is_active) VALUES ('Test Gym', 'Test Address', 1)")
+            cursor.execute("INSERT INTO gyms (name, address, is_active, created_at, updated_at) VALUES ('Test Gym', 'Test Address', 1, NOW(), NOW())")
             cursor.execute("SELECT * FROM gyms WHERE name = 'Test Gym'")
             result = cursor.fetchone()
             if result:
@@ -177,6 +177,118 @@ def test_table_operations():
         
     except Exception as e:
         print(f"❌ Table operations test failed: {str(e)}")
+        return False
+
+def check_alembic_status():
+    """Check Alembic migration status"""
+    print("\n=== Checking Alembic Migration Status ===")
+    
+    try:
+        import subprocess
+        import os
+        
+        # Check if alembic.ini exists
+        if not os.path.exists("alembic.ini"):
+            print("❌ alembic.ini not found - Alembic not configured")
+            return False
+        
+        # Check if alembic directory exists
+        if not os.path.exists("alembic"):
+            print("❌ alembic directory not found - Alembic not configured")
+            return False
+        
+        # Try to get current migration status
+        try:
+            result = subprocess.run(
+                ["alembic", "current"], 
+                capture_output=True, 
+                text=True, 
+                check=True
+            )
+            current_revision = result.stdout.strip()
+            if current_revision:
+                print(f"✅ Current migration: {current_revision}")
+            else:
+                print("⚠️  No migrations applied yet")
+            
+            # Check for pending migrations
+            result = subprocess.run(
+                ["alembic", "show"], 
+                capture_output=True, 
+                text=True, 
+                check=True
+            )
+            if "head" in result.stdout:
+                print("✅ Database is up to date with migrations")
+            else:
+                print("⚠️  Database may not be up to date with migrations")
+                print("   Run 'python migrate.py upgrade' to apply pending migrations")
+            
+            return True
+            
+        except subprocess.CalledProcessError as e:
+            print(f"⚠️  Could not check Alembic status: {e.stderr}")
+            print("   This is normal if no migrations have been created yet")
+            return False
+            
+    except ImportError:
+        print("⚠️  Alembic not available - skipping migration check")
+        return False
+    except Exception as e:
+        print(f"⚠️  Error checking Alembic status: {str(e)}")
+        return False
+
+def check_schema_compatibility():
+    """Check if database schema is compatible with current models"""
+    print("\n=== Checking Schema Compatibility ===")
+    
+    try:
+        conn = pymysql.connect(
+            host=settings.DB_HOST,
+            user=settings.DB_USER,
+            password=settings.DB_PASSWORD,
+            database=settings.DB_NAME,
+            port=int(settings.DB_PORT)
+        )
+        
+        with conn.cursor() as cursor:
+            # Check for required columns in key tables
+            required_columns = {
+                'users': ['id', 'email', 'full_name', 'role', 'gym_id', 'is_active', 'created_at', 'updated_at'],
+                'gyms': ['id', 'name', 'address', 'is_active', 'created_at', 'updated_at'],
+                'plans': ['id', 'name', 'price', 'duration_days', 'gym_id', 'is_active', 'created_at', 'updated_at'],
+                'products': ['id', 'name', 'price', 'quantity', 'gym_id', 'is_active', 'created_at', 'updated_at'],
+                'sales': ['id', 'product_id', 'quantity', 'unit_price', 'total_amount', 'sold_by_id', 'gym_id', 'sale_date', 'created_at', 'updated_at'],
+                'attendance': ['id', 'user_id', 'attendance_date', 'check_in_time', 'check_out_time', 'recorded_by_id', 'notes', 'created_at', 'updated_at'],
+                'measurements': ['id', 'user_id', 'measurement_date', 'weight', 'height', 'created_at', 'updated_at'],
+                'user_plans': ['id', 'user_id', 'plan_id', 'purchased_at', 'expires_at', 'is_active', 'created_at', 'updated_at']
+            }
+            
+            missing_columns = []
+            
+            for table, expected_columns in required_columns.items():
+                cursor.execute(f"DESCRIBE {table}")
+                actual_columns = [row[0] for row in cursor.fetchall()]
+                
+                for column in expected_columns:
+                    if column not in actual_columns:
+                        missing_columns.append(f"{table}.{column}")
+            
+            if missing_columns:
+                print(f"⚠️  Missing {len(missing_columns)} expected columns:")
+                for column in missing_columns[:10]:  # Show first 10
+                    print(f"   - {column}")
+                if len(missing_columns) > 10:
+                    print(f"   ... and {len(missing_columns) - 10} more")
+                print("   Consider running migrations to update the schema")
+            else:
+                print("✅ Database schema appears compatible with current models")
+        
+        conn.close()
+        return len(missing_columns) == 0
+        
+    except Exception as e:
+        print(f"⚠️  Could not check schema compatibility: {str(e)}")
         return False
 
 if __name__ == "__main__":
@@ -197,6 +309,12 @@ if __name__ == "__main__":
         
         # Test table operations
         test_table_operations()
+        
+        # Check Alembic migration status
+        check_alembic_status()
+        
+        # Check schema compatibility
+        check_schema_compatibility()
         
     else:
         print("\n" + "="*50)
@@ -223,6 +341,9 @@ if __name__ == "__main__":
         print("6. Initialize the database:")
         print("   python -m app.core.init_db")
         print()
-        print("7. Start the application:")
+        print("7. Set up Alembic migrations (optional but recommended):")
+        print("   python migrate.py init")
+        print()
+        print("8. Start the application:")
         print("   uvicorn main:app --reload")
         print() 
