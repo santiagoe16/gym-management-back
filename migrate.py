@@ -36,6 +36,7 @@ def main():
         print("  python migrate.py history                 # Show migration history")
         print("  python migrate.py current                 # Show current migration")
         print("  python migrate.py status                  # Show migration status")
+        print("  python migrate.py reset                   # Reset migration state")
         print("\nExamples:")
         print("  python migrate.py create add_user_table")
         print("  python migrate.py create update_product_schema")
@@ -45,15 +46,25 @@ def main():
 
     if command == "init":
         print("🔧 Initializing database with current schema...")
-        # Create initial migration
-        result = run_command("alembic", ["revision", "--autogenerate", "-m", "Initial migration"])
+        
+        # Check if we already have a baseline migration
+        result = run_command("alembic", ["current"])
+        if result and "0001" in result:
+            print("✅ Database already initialized with baseline migration")
+            print("💡 Use 'python migrate.py create <message>' for new migrations")
+            return
+        
+        # Create a baseline migration that doesn't change anything
+        print("📝 Creating baseline migration...")
+        result = run_command("alembic", ["revision", "-m", "Initial baseline"])
         if result:
-            print("✅ Initial migration created")
-            print("📝 Applying migration...")
-            run_command("alembic", ["upgrade", "head"])
+            print("✅ Baseline migration created")
+            print("📝 Marking as current...")
+            run_command("alembic", ["stamp", "head"])
             print("✅ Database initialized successfully!")
+            print("💡 Use 'python migrate.py create <message>' for new migrations")
         else:
-            print("❌ Failed to create initial migration")
+            print("❌ Failed to create baseline migration")
 
     elif command == "create":
         if len(sys.argv) < 3:
@@ -73,8 +84,9 @@ def main():
     elif command == "upgrade":
         print("⬆️  Applying pending migrations...")
         result = run_command("alembic", ["upgrade", "head"])
-        if result:
+        if result is not None:
             print("✅ Migrations applied successfully!")
+            print(f"Output: {result}")
         else:
             print("❌ Failed to apply migrations")
 
@@ -116,6 +128,25 @@ def main():
             print(f"Latest revision: {result.strip()}")
         else:
             print("❌ Failed to get latest migration")
+
+    elif command == "reset":
+        print("🔄 Resetting migration state...")
+        print("⚠️  This will remove all migration files and reset to baseline")
+        confirm = input("Are you sure? (y/N): ")
+        if confirm.lower() == 'y':
+            # Remove all migration files except baseline
+            import glob
+            migration_files = glob.glob("alembic/versions/*.py")
+            for file in migration_files:
+                if "0001_initial_baseline" not in file:
+                    os.remove(file)
+                    print(f"🗑️  Removed: {file}")
+            
+            # Reset to baseline
+            run_command("alembic", ["stamp", "0001"])
+            print("✅ Migration state reset to baseline")
+        else:
+            print("❌ Reset cancelled")
 
     else:
         print(f"❌ Unknown command: {command}")

@@ -21,7 +21,10 @@ if config.config_file_name is not None:
 # for 'autogenerate' support
 from app.models import *  # Import all models
 from sqlmodel import SQLModel
-target_metadata = SQLModel.metadata
+
+# For existing databases, we need to be more careful with autogenerate
+# We'll use the actual database schema as the source of truth
+target_metadata = None  # We'll set this dynamically based on the database
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
@@ -73,8 +76,18 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
+        # For existing databases, reflect the current schema
+        # This prevents Alembic from trying to drop existing tables
+        from sqlalchemy import MetaData
+        metadata = MetaData()
+        metadata.reflect(bind=connection)
+        
         context.configure(
-            connection=connection, target_metadata=target_metadata
+            connection=connection, 
+            target_metadata=metadata,
+            # Disable autogenerate for existing databases to prevent table drops
+            compare_type=False,
+            compare_server_default=False
         )
 
         with context.begin_transaction():

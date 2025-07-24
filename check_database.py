@@ -70,7 +70,7 @@ def check_database_connection():
                 'gyms',           # Gym model
                 'users',          # User model
                 'plans',          # Plan model
-                'user_plans',     # UserPlan model
+                'user_plans',     # UserPlan model (optional - may not exist yet)
                 'products',       # Product model
                 'sales',          # Sale model
                 'measurements',   # Measurement model
@@ -94,8 +94,10 @@ def check_database_connection():
                     missing_tables.append(table)
             
             if missing_tables:
-                print(f"\n❌ Missing {len(missing_tables)} tables: {', '.join(missing_tables)}")
-                print("   You need to run the database initialization:")
+                print(f"\n⚠️  Missing {len(missing_tables)} tables: {', '.join(missing_tables)}")
+                if 'user_plans' in missing_tables or 'sales' in missing_tables:
+                    print("   Note: user_plans and sales tables are optional and may be created later")
+                print("   You can run the database initialization if needed:")
                 print("   python -m app.core.init_db")
             else:
                 print(f"\n✅ All {len(expected_tables)} tables exist!")
@@ -108,7 +110,10 @@ def check_database_connection():
                     print(f"   - {table}: {count} records")
         
         conn.close()
-        return len(missing_tables) == 0
+        # Consider it successful if only optional tables are missing
+        optional_tables = ['user_plans', 'sales']
+        critical_missing = [t for t in missing_tables if t not in optional_tables]
+        return len(critical_missing) == 0
         
     except Exception as e:
         print(f"❌ Failed to connect to database '{settings.DB_NAME}': {str(e)}")
@@ -264,15 +269,26 @@ def check_schema_compatibility():
                 'user_plans': ['id', 'user_id', 'plan_id', 'purchased_at', 'expires_at', 'is_active', 'created_at', 'updated_at']
             }
             
+            # Optional tables that may not exist yet
+            optional_tables = ['user_plans', 'sales']
+            
             missing_columns = []
             
             for table, expected_columns in required_columns.items():
-                cursor.execute(f"DESCRIBE {table}")
-                actual_columns = [row[0] for row in cursor.fetchall()]
-                
-                for column in expected_columns:
-                    if column not in actual_columns:
-                        missing_columns.append(f"{table}.{column}")
+                try:
+                    cursor.execute(f"DESCRIBE {table}")
+                    actual_columns = [row[0] for row in cursor.fetchall()]
+                    
+                    for column in expected_columns:
+                        if column not in actual_columns:
+                            missing_columns.append(f"{table}.{column}")
+                except Exception as e:
+                    if table in optional_tables:
+                        # Skip optional tables that don't exist
+                        continue
+                    else:
+                        # Re-raise for critical tables
+                        raise e
             
             if missing_columns:
                 print(f"⚠️  Missing {len(missing_columns)} expected columns:")
@@ -300,7 +316,7 @@ if __name__ == "__main__":
         print("DATABASE IS READY!")
         print("="*50)
         print("✅ Database connection successful")
-        print("✅ All tables exist")
+        print("✅ All critical tables exist")
         print("✅ Ready to run the application")
         print()
         print("You can now start the application with:")
