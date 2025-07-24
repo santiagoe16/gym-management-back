@@ -2,12 +2,12 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlmodel import Session, select, func
 from app.core.database import get_session
-from app.core.deps import get_current_active_user, require_admin, require_trainer_or_admin
+from app.core.deps import require_admin, require_trainer_or_admin
 from app.models.user import User, UserRole
 from app.models.product import Product
-from app.models.sale import Sale, SaleCreate, SaleRead, SaleUpdate, SaleReadWithDetails
-from datetime import datetime, date, timezone
-from decimal import Decimal
+from app.models.sale import Sale, SaleCreate, SaleUpdate
+from datetime import date
+from app.models.read_models import SaleRead
 
 router = APIRouter()
 
@@ -57,7 +57,7 @@ def create_sale(
     
     return db_sale
 
-@router.get("/", response_model=List[SaleReadWithDetails])
+@router.get("/", response_model=List[SaleRead])
 def read_sales(
     skip: int = 0,
     limit: int = 100,
@@ -97,7 +97,7 @@ def read_sales(
     
     return result
 
-@router.get("/daily", response_model=List[SaleReadWithDetails])
+@router.get("/daily", response_model=List[SaleRead])
 def read_daily_sales(
     sale_date: date = Query(..., description="Date to get sales for"),
     trainer_id: Optional[int] = Query(None, description="Filter by trainer ID"),
@@ -165,7 +165,7 @@ def get_sales_summary(
         }
     }
 
-@router.get("/{sale_id}", response_model=SaleReadWithDetails)
+@router.get("/{sale_id}", response_model=SaleRead)
 def read_sale(
     sale_id: int,
     session: Session = Depends(get_session),
@@ -187,7 +187,7 @@ def read_sale(
     sale_dict["product_name"] = sale.product.name if sale.product else None
     sale_dict["trainer_name"] = sale.sold_by.full_name if sale.sold_by else None
     
-    return SaleReadWithDetails(**sale_dict)
+    return SaleRead(**sale_dict)
 
 @router.put("/{sale_id}", response_model=SaleRead)
 def update_sale(

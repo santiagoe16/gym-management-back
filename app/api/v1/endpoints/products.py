@@ -4,7 +4,8 @@ from sqlmodel import Session, select
 from app.core.database import get_session
 from app.core.deps import get_current_active_user, require_admin, require_trainer_or_admin
 from app.models.user import User, UserRole
-from app.models.product import Product, ProductCreate, ProductRead, ProductUpdate
+from app.models.product import Product, ProductCreate, ProductUpdate
+from app.models.read_models import ProductRead
 
 router = APIRouter()
 

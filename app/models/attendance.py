@@ -31,8 +31,3 @@ class AttendanceCreate(SQLModel):
 class AttendanceUpdate(SQLModel):
     check_out_time: Optional[datetime] = None
     notes: Optional[str] = None
-
-class AttendanceRead(AttendanceBase):
-    id: int
-    created_at: datetime
-    updated_at: datetime 

@@ -3,12 +3,12 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlmodel import Session, select
 from app.core.database import get_session
-from app.core.deps import get_current_active_user, require_admin, require_trainer_or_admin
+from app.core.deps import require_admin, require_trainer_or_admin
 from app.models.user import User, UserRole
 from app.models.plan import Plan
-from app.models.user_plan import UserPlan, UserPlanCreate, UserPlanUpdate, UserPlanRead
-from datetime import datetime, timezone, timedelta
-from decimal import Decimal
+from app.models.user_plan import UserPlan, UserPlanUpdate
+from datetime import datetime, timezone
+from app.models.read_models import UserPlanRead
 
 router = APIRouter()
 

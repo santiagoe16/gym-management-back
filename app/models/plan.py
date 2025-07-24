@@ -30,8 +30,4 @@ class PlanUpdate(SQLModel):
     duration_days: Optional[int] = None
     gym_id: Optional[int] = None
     is_active: Optional[bool] = None
-
-class PlanRead(PlanBase):
-    id: int
-    created_at: datetime
-    updated_at: datetime 
+    

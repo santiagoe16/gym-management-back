@@ -27,8 +27,3 @@ class GymUpdate(SQLModel):
     name: Optional[str] = None
     address: Optional[str] = None
     is_active: Optional[bool] = None
-
-class GymRead(GymBase):
-    id: int
-    created_at: datetime
-    updated_at: datetime 

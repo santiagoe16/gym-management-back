@@ -30,8 +30,3 @@ class ProductUpdate(SQLModel):
     quantity: Optional[int] = None
     gym_id: Optional[int] = None
     is_active: Optional[bool] = None
-
-class ProductRead(ProductBase):
-    id: int
-    created_at: datetime
-    updated_at: datetime 

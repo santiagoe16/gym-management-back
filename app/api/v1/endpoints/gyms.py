@@ -3,7 +3,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session, select
 from app.core.database import get_session
 from app.core.deps import get_current_active_user, require_admin
-from app.models.gym import Gym, GymCreate, GymRead, GymUpdate
+from app.models.gym import Gym, GymCreate, GymUpdate
+from app.models.read_models import GymRead
 from app.models.user import User
 
 router = APIRouter()

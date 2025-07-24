@@ -33,12 +33,3 @@ class SaleUpdate(SQLModel):
     quantity: Optional[int] = None
     unit_price: Optional[Decimal] = None
     sale_date: Optional[datetime] = None
-
-class SaleRead(SaleBase):
-    id: int
-    created_at: datetime
-    updated_at: datetime
-
-class SaleReadWithDetails(SaleRead):
-    product_name: Optional[str] = None
-    trainer_name: Optional[str] = None 

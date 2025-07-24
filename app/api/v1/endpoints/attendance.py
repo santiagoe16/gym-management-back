@@ -1,11 +1,12 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlmodel import Session, select, func
+from sqlmodel import Session, select
 from app.core.database import get_session
-from app.core.deps import get_current_active_user, require_admin, require_trainer_or_admin
+from app.core.deps import require_admin, require_trainer_or_admin
 from app.models.user import User, UserRole
-from app.models.attendance import Attendance, AttendanceCreate, AttendanceUpdate, AttendanceRead
-from datetime import datetime, date, timedelta, timezone
+from app.models.attendance import Attendance, AttendanceCreate, AttendanceUpdate
+from datetime import datetime, date, timezone
+from app.models.read_models import AttendanceRead
 
 router = APIRouter()
 

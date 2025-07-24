@@ -5,15 +5,14 @@ from sqlmodel import Session, select
 from sqlalchemy.orm import selectinload
 from app.core.database import get_session
 from app.core.security import get_password_hash
-from app.core.deps import get_current_active_user, require_admin, require_trainer_or_admin
-from app.models.user import User, UserCreateWithPassword, UserCreateWithoutPassword, UserCreateWithPlan, UserRead, UserUpdate, UserRole
+from app.core.deps import require_admin, require_trainer_or_admin
+from app.models.user import User, UserCreateWithPassword, UserCreateWithPlan, UserUpdate, UserRole
 from app.models.plan import Plan
-from app.models.user_plan import UserPlan, UserPlanCreate
+from app.models.user_plan import UserPlan
 from app.models.gym import Gym
 from datetime import datetime, timedelta
-from decimal import Decimal
-from app.models.gym import GymRead
-from app.models.user_plan import UserPlanRead
+from decimal import Decimal 
+from app.models.read_models import UserPlanRead, UserRead, UserBase
 
 router = APIRouter()
 
@@ -53,6 +52,11 @@ def read_users(
         user_data = UserRead.model_validate(user)
         last_plan = get_last_plan(user)
         user_data.active_plan = UserPlanRead.model_validate(last_plan) if last_plan else None
+
+        if user_data.active_plan is not None:
+            created_by_user = session.exec( select( User ).where( User.id == user_data.active_plan.created_by_id ) ).first()
+            user_data.active_plan.created_by_user = UserBase.model_validate(created_by_user) if created_by_user else None
+
         user_list.append(user_data)
 
     return user_list
@@ -220,6 +224,10 @@ def search_user_by_document_id(
     last_plan = get_last_plan(user)
     user_data.active_plan = UserPlanRead.model_validate(last_plan) if last_plan else None
 
+    if user_data.active_plan is not None:
+        created_by_user = session.exec( select( User ).where( User.id == user_data.active_plan.created_by_id ) ).first()
+        user_data.active_plan.created_by_user = UserBase.model_validate(created_by_user) if created_by_user else None
+
     return user_data
 
 @router.get("/search/phone/{phone_number}", response_model=List[UserRead])
@@ -253,6 +261,11 @@ def search_users_by_phone(
         user_data = UserRead.model_validate(user)
         last_plan = get_last_plan(user)
         user_data.active_plan = UserPlanRead.model_validate(last_plan) if last_plan else None
+
+        if user_data.active_plan is not None:
+            created_by_user = session.exec( select( User ).where( User.id == user_data.active_plan.created_by_id ) ).first()
+            user_data.active_plan.created_by_user = UserBase.model_validate(created_by_user) if created_by_user else None
+
         user_list.append(user_data)
 
     return user_list
@@ -279,6 +292,10 @@ def read_user(
     last_plan = get_last_plan(user)
     user_data.active_plan = UserPlanRead.model_validate(last_plan) if last_plan else None
     
+    if user_data.active_plan is not None:
+        created_by_user = session.exec( select( User ).where( User.id == user_data.active_plan.created_by_id ) ).first()
+        user_data.active_plan.created_by_user = UserBase.model_validate(created_by_user) if created_by_user else None
+
     return user_data
 
 @router.put("/{user_id}", response_model=UserRead)

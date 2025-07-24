@@ -3,9 +3,6 @@ from typing import Optional
 from datetime import datetime, timezone
 from decimal import Decimal
 
-from app.models.plan import PlanRead
-from app.models.user import UserRead
-
 class UserPlanBase(SQLModel):
     user_id: int = Field(foreign_key="users.id")
     plan_id: int = Field(foreign_key="plans.id")
@@ -37,11 +34,3 @@ class UserPlanUpdate(SQLModel):
     plan_id: Optional[int] = None
     expires_at: Optional[datetime] = None
     is_active: Optional[bool] = None
-
-class UserPlanRead(UserPlanBase):
-    id: int
-    is_active: bool
-    created_at: datetime
-    updated_at: datetime 
-    plan: Optional[ "PlanRead" ] = Field( default = None )
-    created_by_user = Optional[ "UserRead" ] = Field( default = None )

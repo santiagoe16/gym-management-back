@@ -1,10 +1,7 @@
 from enum import Enum
 from sqlmodel import SQLModel, Field, Relationship
-from typing import Optional, List, Annotated
+from typing import Optional, List
 from datetime import datetime, timezone
-
-from app.models.gym import GymRead
-from app.models.user_plan import UserPlanRead
 
 class UserRole(str, Enum):
     ADMIN = "admin"
@@ -58,15 +55,3 @@ class UserUpdate(SQLModel):
     gym_id: Optional[int] = None
     role: Optional[UserRole] = None
     is_active: Optional[bool] = None
-
-class UserRead(UserBase):
-    id: int
-    created_at: datetime
-    updated_at: datetime
-    gym: Optional["GymRead"] = Field(default=None)
-    active_plan: Optional["UserPlanRead"] = Field(default=None)
-
-
-class UserReadWithPlans(UserRead):
-    user_plans: List["UserPlanRead"] = Field(default=[])
-    pass 

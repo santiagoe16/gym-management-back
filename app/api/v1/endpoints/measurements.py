@@ -2,14 +2,15 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlmodel import Session, select, func
 from app.core.database import get_session
-from app.core.deps import get_current_active_user, require_trainer_or_admin
-from app.models.measurement import Measurement, MeasurementCreate, MeasurementRead, MeasurementUpdate, MeasurementReadWithUser
+from app.core.deps import require_trainer_or_admin
+from app.models.measurement import Measurement, MeasurementCreate, MeasurementUpdate
 from app.models.user import User, UserRole
-from datetime import datetime, date
+from datetime import date
+from app.models.read_models import MeasurementRead
 
 router = APIRouter()
 
-@router.get("/", response_model=List[MeasurementReadWithUser])
+@router.get("/", response_model=List[MeasurementRead])
 def read_measurements(
     skip: int = 0,
     limit: int = 100,
@@ -47,7 +48,7 @@ def read_measurements(
         measurement_dict = measurement.model_dump()
         measurement_dict["user_name"] = measurement.user.full_name if measurement.user else None
         measurement_dict["recorded_by_name"] = measurement.recorded_by.full_name if measurement.recorded_by else None
-        result.append(MeasurementReadWithUser(**measurement_dict))
+        result.append(MeasurementRead(**measurement_dict))
     
     return result
 

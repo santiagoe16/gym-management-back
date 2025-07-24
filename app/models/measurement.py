@@ -64,12 +64,3 @@ class MeasurementUpdate(SQLModel):
     calves_right: Optional[Decimal] = None
     notes: Optional[str] = None
     measurement_date: Optional[datetime] = None
-
-class MeasurementRead(MeasurementBase):
-    id: int
-    created_at: datetime
-    updated_at: datetime
-
-class MeasurementReadWithUser(MeasurementRead):
-    user_name: Optional[str] = None
-    recorded_by_name: Optional[str] = None 

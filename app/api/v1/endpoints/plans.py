@@ -1,11 +1,13 @@
+from app.models.read_models import PlanRead
+
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session, select
+from sqlalchemy.orm import selectinload
 from app.core.database import get_session
 from app.core.deps import get_current_active_user, require_admin
 from app.models.user import User
-from app.models.plan import Plan, PlanCreate, PlanRead, PlanUpdate
-from decimal import Decimal
+from app.models.plan import Plan, PlanCreate, PlanUpdate
 
 router = APIRouter()
 
@@ -58,9 +60,13 @@ def read_plan(
     current_user: User = Depends(get_current_active_user)
 ):
     """Get a specific plan - Admin and Trainer access"""
-    plan = session.exec(select(Plan).where(Plan.id == plan_id)).first()
+    plan = session.exec( 
+        select( Plan ).where( Plan.id == plan_id ).options( selectinload( Plan.gym ) )
+    ).first()
+
     if plan is None:
         raise HTTPException(status_code=404, detail="Plan not found")
+    
     return plan
 
 @router.put("/{plan_id}", response_model=PlanRead)
