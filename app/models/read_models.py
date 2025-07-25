@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, TYPE_CHECKING, Union
 from sqlmodel import Field
 
 from app.models.attendance import AttendanceBase
@@ -10,6 +10,9 @@ from app.models.plan import PlanBase
 from app.models.sale import SaleBase
 from app.models.product import ProductBase
 from app.models.measurement import MeasurementBase
+
+if TYPE_CHECKING:
+    from app.models.read_models import UserRead, PlanRead, GymRead, UserPlanRead, ProductRead
 
 class AttendanceRead(AttendanceBase):
     id: int
@@ -25,41 +28,41 @@ class PlanRead(PlanBase):
     id: int
     created_at: datetime
     updated_at: datetime
-    gym: Optional["GymRead"] = Field(default=None)
+    gym: Union["GymRead", None] = Field(default=None)
+
+class ProductRead(ProductBase):
+    id: int
+    created_at: datetime
+    updated_at: datetime
+    gym: Union["GymRead", None] = Field(default=None)
+
+class UserRead(UserBase):
+    id: int
+    created_at: datetime
+    updated_at: datetime
+    gym: Union["GymRead", None] = Field(default=None)
+    active_plan: Union["UserPlanRead", None] = Field(default=None)
 
 class UserPlanRead(UserPlanBase):
     id: int
     is_active: bool
     created_at: datetime
     updated_at: datetime 
-    plan: Optional[ "PlanRead" ] = Field( default = None )
-    created_by_user: Optional["UserBase"] = Field(default=None)
-    user: Optional["UserRead"] = Field(default=None)
-    
-class UserRead(UserBase):
-    id: int
-    created_at: datetime
-    updated_at: datetime
-    gym: Optional["GymRead"] = Field(default=None)
-    active_plan: Optional["UserPlanRead"] = Field(default=None)
+    plan: Union["PlanRead", None] = Field(default=None)
+    created_by_user: Union["UserBase", None] = Field(default=None)
+    user: Union["UserRead", None] = Field(default=None)
 
 class SaleRead(SaleBase):
     id: int
     created_at: datetime
     updated_at: datetime
-    product: Optional["ProductRead"] = Field(default=None)
-    gym: Optional["GymRead"] = Field(default=None)
-    sold_by: Optional["UserRead"] = Field(default=None)
-    
-class ProductRead(ProductBase):
-    id: int
-    created_at: datetime
-    updated_at: datetime
-    gym: Optional["GymRead"] = Field(default=None)
+    product: Union["ProductRead", None] = Field(default=None)
+    gym: Union["GymRead", None] = Field(default=None)
+    sold_by: Union["UserRead", None] = Field(default=None)
     
 class MeasurementRead(MeasurementBase):
     id: int
     created_at: datetime
     updated_at: datetime
-    user: Optional["UserRead"] = None
-    recorded_by_user: Optional["UserRead"] = None 
+    user: Union["UserRead", None] = None
+    recorded_by_user: Union["UserRead", None] = None 

@@ -259,7 +259,7 @@ def check_schema_compatibility():
         with conn.cursor() as cursor:
             # Check for required columns in key tables
             required_columns = {
-                'users': ['id', 'email', 'full_name', 'role', 'gym_id', 'is_active', 'created_at', 'updated_at'],
+                'users': ['id', 'email', 'document_id', 'phone_number', 'schedule_start', 'schedule_end', 'full_name', 'role', 'gym_id', 'is_active', 'created_at', 'updated_at'],
                 'gyms': ['id', 'name', 'address', 'is_active', 'created_at', 'updated_at'],
                 'plans': ['id', 'name', 'price', 'duration_days', 'gym_id', 'is_active', 'created_at', 'updated_at'],
                 'products': ['id', 'name', 'price', 'quantity', 'gym_id', 'is_active', 'created_at', 'updated_at'],

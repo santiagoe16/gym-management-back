@@ -66,6 +66,17 @@ def get_user_by_document_id( session: Session, document_id: str, gym_id: int ):
 
     return user
 
+def get_user_by_id( session: Session, user_id: int, gym_id: int ):
+    user = session.exec(select(User).where(User.id == user_id, User.gym_id == gym_id)).first()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User not registered in this gym"
+        )
+
+    return user
+
 def get_user_by_email( session: Session, email: str, gym_id: int ):
     user = session.exec(select(User).where(User.email == email, User.gym_id == gym_id)).first()
 

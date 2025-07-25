@@ -7,7 +7,7 @@ from app.models.user import User, UserRole
 from app.models.attendance import Attendance, AttendanceCreate, AttendanceUpdate
 from datetime import datetime, date, timezone
 from app.models.read_models import AttendanceRead
-from app.core.methods import check_gym, get_user_by_id
+from app.core.methods import check_gym, check_user_by_id, get_user_by_id
 
 router = APIRouter()
 
@@ -84,6 +84,8 @@ def get_user_attendance_summary(
 ):
     """Get attendance summary for a specific user - Admin and Trainer access only"""
     check_gym( session, current_user.gym_id )
+    
+    user = get_user_by_id( session, user_id, current_user.gym_id )
 
     # If trainer, only allow access to users in their gym
     if current_user.role == UserRole.TRAINER and user.gym_id != current_user.gym_id:
@@ -91,8 +93,6 @@ def get_user_attendance_summary(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You can only access users in your own gym"
         )
-    
-    user = get_user_by_id( session, user_id, current_user.gym_id )
     
     query = select( Attendance ).where( Attendance.user_id == user_id, Attendance.gym_id == current_user.gym_id )
     
