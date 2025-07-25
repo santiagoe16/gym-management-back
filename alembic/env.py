@@ -55,8 +55,7 @@ def run_migrations_offline() -> None:
         compare_type=True,
         compare_server_default=True,
         include_comments=True,
-        include_schemas=False,  # Disable schema inspection to avoid permission issues
-        # Restrict to specific database
+        include_schemas=False,
         version_table_schema=None
     )
 
@@ -81,22 +80,13 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        # Reflect the existing database schema
-        from sqlalchemy import MetaData
-        existing_metadata = MetaData()
-        existing_metadata.reflect(bind=connection)
-        
         context.configure(
             connection=connection, 
             target_metadata=target_metadata,
-            # Enable autogenerate features
             compare_type=True,
             compare_server_default=True,
-            # Include comments in migrations
             include_comments=True,
-            # Include indexes
-            include_schemas=False,  # Disable schema inspection to avoid permission issues
-            # Restrict to specific database
+            include_schemas=False,
             version_table_schema=None
         )
 

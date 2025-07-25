@@ -13,11 +13,10 @@ router = APIRouter()
 def read_gyms(
     skip: int = 0,
     limit: int = 100,
-    session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_active_user)
+    session: Session = Depends(get_session)
 ):
-    """Get all gyms - All authenticated users can view"""
     gyms = session.exec(select(Gym).offset(skip).limit(limit)).all()
+    
     return gyms
 
 @router.get("/active", response_model=List[GymRead])

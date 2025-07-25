@@ -14,7 +14,7 @@ router = APIRouter()
 
 trainer_message = "You can only view products for users in your gym"
 
-@router.get("/")
+@router.get("/", response_model=List[ProductRead])
 def read_products(
     skip: int = 0,
     limit: int = 100,
@@ -31,7 +31,7 @@ def read_products(
 
     return products
 
-@router.get("/active")
+@router.get("/active", response_model=List[ProductRead])
 def read_active_products(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_active_user)
@@ -159,6 +159,12 @@ def update_stock(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Stock quantity cannot be negative"
+        )
+    
+    if quantity > 999999999:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Stock quantity cannot exceed 999,999,999"
         )
     
     db_product.quantity = quantity

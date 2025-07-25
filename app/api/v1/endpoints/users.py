@@ -9,7 +9,6 @@ from app.core.deps import require_admin, require_trainer_or_admin
 from app.models.user import User, UserCreateWithPassword, UserCreateWithPlan, UserUpdate, UserRole
 from app.models.plan import Plan
 from app.models.user_plan import UserPlan
-from app.models.gym import Gym
 from datetime import datetime, timedelta
 from decimal import Decimal 
 from app.models.read_models import UserPlanRead, UserRead, UserBase
@@ -48,7 +47,7 @@ def read_users(
         last_plan = get_last_plan(user)
         user_data.active_plan = UserPlanRead.model_validate(last_plan) if last_plan else None
 
-        if user_data.active_plan is not None:
+        if user_data.active_plan:
             created_by_user = session.exec( select( User ).where( User.id == user_data.active_plan.created_by_id ) ).first()
             user_data.active_plan.created_by_user = UserBase.model_validate(created_by_user) if created_by_user else None
 
@@ -132,13 +131,12 @@ def create_user_with_plan(
     session.refresh(db_user)
     
     # Create user plan
-    purchased_price = Decimal(str(user.purchased_price)) if user.purchased_price else plan.price
     expires_at = datetime.now(timezone.utc) + timedelta(days=plan.duration_days)
     
     user_plan = UserPlan(
         user_id=db_user.id,
         plan_id=plan.id,
-        purchased_price=purchased_price,
+        purchased_price=plan.price,
         expires_at=expires_at,
         created_by_id=current_user.id
     )
@@ -147,7 +145,7 @@ def create_user_with_plan(
     session.commit()
 
     user_read = UserRead.model_validate(db_user)
-    last_plan = get_last_plan(user)
+    last_plan = get_last_plan(db_user)
     user_read.active_plan = UserPlanRead.model_validate(last_plan) if last_plan else None
     
     return user_read
@@ -250,7 +248,7 @@ def read_user(
     last_plan = get_last_plan(user)
     user_data.active_plan = UserPlanRead.model_validate(last_plan) if last_plan else None
     
-    if user_data.active_plan is not None:
+    if user_data.active_plan:
         created_by_user = session.exec( select( User ).where( User.id == user_data.active_plan.created_by_id ) ).first()
         user_data.active_plan.created_by_user = UserBase.model_validate(created_by_user) if created_by_user else None
 
