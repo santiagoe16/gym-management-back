@@ -1,14 +1,18 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlmodel import Session, select, func
+from sqlalchemy.orm import selectinload
 from app.core.database import get_session
 from app.core.deps import require_trainer_or_admin
+from app.core.methods import check_gym, check_trainer_gym, check_user_by_id
 from app.models.measurement import Measurement, MeasurementCreate, MeasurementUpdate
 from app.models.user import User, UserRole
 from datetime import date
 from app.models.read_models import MeasurementRead
 
 router = APIRouter()
+
+trainer_message = "You can only view measurements for users in your gym"
 
 @router.get("/", response_model=List[MeasurementRead])
 def read_measurements(
@@ -22,7 +26,7 @@ def read_measurements(
     current_user: User = Depends(require_trainer_or_admin)
 ):
     """Get all measurements - Admin and Trainer access only"""
-    query = select(Measurement)
+    query = select(Measurement).options(selectinload(Measurement.user), selectinload(Measurement.recorded_by))
     
     # Apply filters
     if user_id:
@@ -55,26 +59,21 @@ def read_measurements(
 @router.get("/user/{user_id}", response_model=List[MeasurementRead])
 def read_user_measurements(
     user_id: int,
+    gym_id: int,
     skip: int = 0,
     limit: int = 100,
     session: Session = Depends(get_session),
     current_user: User = Depends(require_trainer_or_admin)
 ):
     """Get all measurements for a specific user - Admin and Trainer access only"""
-    # Verify user exists
-    user = session.exec(select(User).where(User.id == user_id)).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+    check_gym( session, gym_id )
+
+    check_trainer_gym( gym_id, current_user, trainer_message )
     
-    # If trainer, only allow access to users in their gym
-    if current_user.role == UserRole.TRAINER and user.gym_id != current_user.gym_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You can only view measurements for users in your gym"
-        )
+    check_user_by_id( session, user_id, gym_id )
     
     measurements = session.exec(
-        select(Measurement)
+        select(Measurement).options(selectinload(Measurement.user), selectinload(Measurement.recorded_by))
         .where(Measurement.user_id == user_id)
         .order_by(Measurement.measurement_date.desc())
         .offset(skip)
@@ -86,24 +85,19 @@ def read_user_measurements(
 @router.get("/user/{user_id}/latest", response_model=MeasurementRead)
 def get_latest_measurement(
     user_id: int,
+    gym_id: int,
     session: Session = Depends(get_session),
     current_user: User = Depends(require_trainer_or_admin)
 ):
     """Get the latest measurement for a specific user - Admin and Trainer access only"""
-    # Verify user exists
-    user = session.exec(select(User).where(User.id == user_id)).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+    check_gym( session, gym_id )
     
-    # If trainer, only allow access to users in their gym
-    if current_user.role == UserRole.TRAINER and user.gym_id != current_user.gym_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You can only view measurements for users in your gym"
-        )
+    check_trainer_gym( gym_id, current_user, trainer_message )
+    
+    check_user_by_id( session, user_id, gym_id )
     
     measurement = session.exec(
-        select(Measurement)
+        select(Measurement).options(selectinload(Measurement.user), selectinload(Measurement.recorded_by))
         .where(Measurement.user_id == user_id)
         .order_by(Measurement.measurement_date.desc())
     ).first()
@@ -116,25 +110,20 @@ def get_latest_measurement(
 @router.get("/user/{user_id}/progress")
 def get_user_progress(
     user_id: int,
+    gym_id: int,
     start_date: Optional[date] = Query(None, description="Start date for progress calculation"),
     end_date: Optional[date] = Query(None, description="End date for progress calculation"),
     session: Session = Depends(get_session),
     current_user: User = Depends(require_trainer_or_admin)
 ):
     """Get progress summary for a specific user - Admin and Trainer access only"""
-    # Verify user exists
-    user = session.exec(select(User).where(User.id == user_id)).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+    check_gym( session, gym_id )
+
+    check_trainer_gym( gym_id, current_user, trainer_message )
     
-    # If trainer, only allow access to users in their gym
-    if current_user.role == UserRole.TRAINER and user.gym_id != current_user.gym_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You can only view measurements for users in your gym"
-        )
+    check_user_by_id( session, user_id, gym_id )
     
-    query = select(Measurement).where(Measurement.user_id == user_id)
+    query = select(Measurement).options(selectinload(Measurement.user), selectinload(Measurement.recorded_by)).where(Measurement.user_id == user_id)
     
     if start_date:
         query = query.where(func.date(Measurement.measurement_date) >= start_date)
@@ -196,21 +185,16 @@ def get_user_progress(
 @router.post("/", response_model=MeasurementRead)
 def create_measurement(
     measurement: MeasurementCreate,
+    gym_id: int,
     session: Session = Depends(get_session),
     current_user: User = Depends(require_trainer_or_admin)
 ):
     """Create a new measurement - Admin and Trainer access only"""
-    # Verify user exists
-    user = session.exec(select(User).where(User.id == measurement.user_id)).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    
-    # If trainer, only allow creating measurements for users in their gym
-    if current_user.role == UserRole.TRAINER and user.gym_id != current_user.gym_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You can only create measurements for users in your gym"
-        )
+    check_gym( session, gym_id )
+
+    check_trainer_gym( gym_id, current_user, trainer_message )
+
+    check_user_by_id( session, measurement.user_id, gym_id )
     
     # Create new measurement
     db_measurement = Measurement.model_validate(measurement)
@@ -227,18 +211,14 @@ def read_measurement(
     current_user: User = Depends(require_trainer_or_admin)
 ):
     """Get a specific measurement - Admin and Trainer access only"""
-    measurement = session.exec(select(Measurement).where(Measurement.id == measurement_id)).first()
+    measurement = session.exec(select(Measurement).options(selectinload(Measurement.user), selectinload(Measurement.recorded_by)).where(Measurement.id == measurement_id)).first()
     if measurement is None:
         raise HTTPException(status_code=404, detail="Measurement not found")
     
-    # If trainer, only allow access to measurements from their gym
-    if current_user.role == UserRole.TRAINER:
-        user = session.exec(select(User).where(User.id == measurement.user_id)).first()
-        if user and user.gym_id != current_user.gym_id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="You can only view measurements for users in your gym"
-            )
+    if( current_user.role == UserRole.TRAINER ):
+        user = session.exec( select(User).where( User.id == measurement.user_id ) ).first()
+
+        check_trainer_gym( user.gym_id, current_user, trainer_message )
     
     return measurement
 
@@ -250,28 +230,24 @@ def update_measurement(
     current_user: User = Depends(require_trainer_or_admin)
 ):
     """Update a measurement - Admin and Trainer access only"""
-    db_measurement = session.exec(select(Measurement).where(Measurement.id == measurement_id)).first()
-    if db_measurement is None:
+    measurement = session.exec(select(Measurement).where(Measurement.id == measurement_id)).first()
+    if measurement is None:
         raise HTTPException(status_code=404, detail="Measurement not found")
     
-    # If trainer, only allow updating measurements from their gym
-    if current_user.role == UserRole.TRAINER:
-        user = session.exec(select(User).where(User.id == db_measurement.user_id)).first()
-        if user and user.gym_id != current_user.gym_id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="You can only update measurements for users in your gym"
-            )
+    if( current_user.role == UserRole.TRAINER ):
+        user = session.exec( select(User).where( User.id == measurement.user_id ) ).first()
+
+        check_trainer_gym( user.gym_id, current_user, trainer_message )
     
     # Update measurement data
-    measurement_data = measurement_update.dict(exclude_unset=True)
+    measurement_data = measurement_update.model_dump(exclude_unset=True)
     for key, value in measurement_data.items():
-        setattr(db_measurement, key, value)
+        setattr(measurement, key, value)
     
-    session.add(db_measurement)
+    session.add(measurement)
     session.commit()
-    session.refresh(db_measurement)
-    return db_measurement
+    session.refresh(measurement)
+    return measurement
 
 @router.delete("/{measurement_id}")
 def delete_measurement(
@@ -280,19 +256,16 @@ def delete_measurement(
     current_user: User = Depends(require_trainer_or_admin)
 ):
     """Delete a measurement - Admin and Trainer access only"""
-    db_measurement = session.exec(select(Measurement).where(Measurement.id == measurement_id)).first()
-    if db_measurement is None:
+    measurement = session.exec(select(Measurement).where(Measurement.id == measurement_id)).first()
+    if measurement is None:
         raise HTTPException(status_code=404, detail="Measurement not found")
     
-    # If trainer, only allow deleting measurements from their gym
-    if current_user.role == UserRole.TRAINER:
-        user = session.exec(select(User).where(User.id == db_measurement.user_id)).first()
-        if user and user.gym_id != current_user.gym_id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="You can only delete measurements for users in your gym"
-            )
-    
-    session.delete(db_measurement)
+    if( current_user.role == UserRole.TRAINER ):
+        user = session.exec( select(User).where( User.id == measurement.user_id ) ).first()
+
+        check_trainer_gym( user.gym_id, current_user, trainer_message )
+
+    session.delete(measurement)
     session.commit()
+    
     return {"message": "Measurement deleted successfully"} 

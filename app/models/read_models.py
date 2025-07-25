@@ -34,6 +34,7 @@ class UserPlanRead(UserPlanBase):
     updated_at: datetime 
     plan: Optional[ "PlanRead" ] = Field( default = None )
     created_by_user: Optional["UserBase"] = Field(default=None)
+    user: Optional["UserRead"] = Field(default=None)
     
 class UserRead(UserBase):
     id: int
@@ -46,17 +47,19 @@ class SaleRead(SaleBase):
     id: int
     created_at: datetime
     updated_at: datetime
-    product_name: Optional[str] = None
-    trainer_name: Optional[str] = None
+    product: Optional["ProductRead"] = Field(default=None)
+    gym: Optional["GymRead"] = Field(default=None)
+    sold_by: Optional["UserRead"] = Field(default=None)
     
 class ProductRead(ProductBase):
     id: int
     created_at: datetime
     updated_at: datetime
+    gym: Optional["GymRead"] = Field(default=None)
     
 class MeasurementRead(MeasurementBase):
     id: int
     created_at: datetime
     updated_at: datetime
-    user_name: Optional[str] = None
-    recorded_by_name: Optional[str] = None 
+    user: Optional["UserRead"] = None
+    recorded_by_user: Optional["UserRead"] = None 

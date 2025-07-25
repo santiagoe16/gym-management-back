@@ -7,6 +7,7 @@ from app.models.user import User, UserRole
 from app.models.attendance import Attendance, AttendanceCreate, AttendanceUpdate
 from datetime import datetime, date, timezone
 from app.models.read_models import AttendanceRead
+from app.core.methods import check_gym, get_user_by_id
 
 router = APIRouter()
 
@@ -51,14 +52,8 @@ def read_user_attendance(
     current_user: User = Depends(require_trainer_or_admin)
 ):
     """Get attendance records for a specific user - Admin and Trainer access only"""
-    # Get the user
-    user = session.exec(select(User).where(User.id == user_id)).first()
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
-        )
-    
+    check_gym( session, current_user.gym_id )
+
     # If trainer, only allow access to users in their gym
     if current_user.role == UserRole.TRAINER and user.gym_id != current_user.gym_id:
         raise HTTPException(
@@ -66,7 +61,9 @@ def read_user_attendance(
             detail="You can only access users in your own gym"
         )
     
-    query = select(Attendance).where(Attendance.user_id == user_id)
+    user = get_user_by_id( session, user_id, current_user.gym_id )
+    
+    query = select( Attendance ).where( Attendance.user_id == user_id, Attendance.gym_id == current_user.gym_id )
     
     # Filter by date range if specified
     if start_date:
@@ -86,14 +83,8 @@ def get_user_attendance_summary(
     current_user: User = Depends(require_trainer_or_admin)
 ):
     """Get attendance summary for a specific user - Admin and Trainer access only"""
-    # Get the user
-    user = session.exec(select(User).where(User.id == user_id)).first()
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
-        )
-    
+    check_gym( session, current_user.gym_id )
+
     # If trainer, only allow access to users in their gym
     if current_user.role == UserRole.TRAINER and user.gym_id != current_user.gym_id:
         raise HTTPException(
@@ -101,7 +92,9 @@ def get_user_attendance_summary(
             detail="You can only access users in your own gym"
         )
     
-    query = select(Attendance).where(Attendance.user_id == user_id)
+    user = get_user_by_id( session, user_id, current_user.gym_id )
+    
+    query = select( Attendance ).where( Attendance.user_id == user_id, Attendance.gym_id == current_user.gym_id )
     
     # Filter by date range if specified
     if start_date:

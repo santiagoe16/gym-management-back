@@ -1,3 +1,4 @@
+from app.core.methods import check_trainer_gym
 from app.models.read_models import PlanRead
 
 from typing import List
@@ -6,10 +7,12 @@ from sqlmodel import Session, select
 from sqlalchemy.orm import selectinload
 from app.core.database import get_session
 from app.core.deps import get_current_active_user, require_admin
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.models.plan import Plan, PlanCreate, PlanUpdate
 
 router = APIRouter()
+
+trainer_message = "You can only view plans for users in your gym"
 
 @router.get("/", response_model=List[PlanRead])
 def read_plans(
@@ -19,7 +22,13 @@ def read_plans(
     current_user: User = Depends(get_current_active_user)
 ):
     """Get all plans - Admin and Trainer access"""
-    plans = session.exec(select(Plan).offset(skip).limit(limit)).all()
+    query = select(Plan).options(selectinload(Plan.gym)).offset(skip).limit(limit)
+
+    if current_user.role == UserRole.TRAINER:
+        query = query.where(Plan.gym_id == current_user.gym_id)
+    
+    plans = session.exec(query).all()
+
     return plans
 
 @router.get("/active", response_model=List[PlanRead])
@@ -28,7 +37,13 @@ def read_active_plans(
     current_user: User = Depends(get_current_active_user)
 ):
     """Get all active plans - Admin and Trainer access"""
-    plans = session.exec(select(Plan).where(Plan.is_active == True)).all()
+    query = select(Plan).options(selectinload(Plan.gym)).where(Plan.is_active == True)
+
+    if current_user.role == UserRole.TRAINER:
+        query = query.where(Plan.gym_id == current_user.gym_id)
+
+    plans = session.exec(query).all()
+
     return plans
 
 @router.post("/", response_model=PlanRead)
@@ -60,12 +75,12 @@ def read_plan(
     current_user: User = Depends(get_current_active_user)
 ):
     """Get a specific plan - Admin and Trainer access"""
-    plan = session.exec( 
-        select( Plan ).where( Plan.id == plan_id ).options( selectinload( Plan.gym ) )
-    ).first()
+    plan = session.exec( select( Plan ).options( selectinload( Plan.gym ).where( Plan.id == plan_id ) ) ).first()
 
     if plan is None:
         raise HTTPException(status_code=404, detail="Plan not found")
+    
+    check_trainer_gym( plan.gym_id, current_user, trainer_message )
     
     return plan
 

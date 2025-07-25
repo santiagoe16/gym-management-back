@@ -12,4 +12,5 @@ class TokenData(SQLModel):
 
 class LoginRequest(SQLModel):
     email: str
+    gym_id: int
     password: str 

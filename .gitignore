@@ -10,7 +10,5 @@
 /app/api/v1/__pycache__
 
 # Alembic
-alembic/versions/*.py
-!alembic/versions/__init__.py
 /alembic/versions/__pycache__
 /alembic/__pycache__

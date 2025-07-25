@@ -1,15 +1,20 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlmodel import Session, select
+from sqlalchemy.orm import selectinload
 from app.core.database import get_session
 from app.core.deps import get_current_active_user, require_admin, require_trainer_or_admin
+from app.core.methods import check_trainer_gym
+from app.models.gym import Gym
 from app.models.user import User, UserRole
 from app.models.product import Product, ProductCreate, ProductUpdate
 from app.models.read_models import ProductRead
 
 router = APIRouter()
 
-@router.get("/", response_model=List[ProductRead])
+trainer_message = "You can only view products for users in your gym"
+
+@router.get("/")
 def read_products(
     skip: int = 0,
     limit: int = 100,
@@ -17,16 +22,28 @@ def read_products(
     current_user: User = Depends(get_current_active_user)
 ):
     """Get all products - Admin and Trainer access"""
-    products = session.exec(select(Product).offset(skip).limit(limit)).all()
+    query = select(Product).options(selectinload(Product.gym)).offset(skip).limit(limit)
+
+    if current_user.role == UserRole.TRAINER:
+        query = query.where(Product.gym_id == current_user.gym_id)
+
+    products = session.exec(query).all()
+
     return products
 
-@router.get("/active", response_model=List[ProductRead])
+@router.get("/active")
 def read_active_products(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_active_user)
 ):
     """Get all active products - Admin and Trainer access"""
-    products = session.exec(select(Product).where(Product.is_active == True)).all()
+    query = select(Product).options(selectinload(Product.gym)).where(Product.is_active == True)
+
+    if current_user.role == UserRole.TRAINER:
+        query = query.where(Product.gym_id == current_user.gym_id)
+
+    products = session.exec(query).all()
+
     return products
 
 @router.get("/low-stock", response_model=List[ProductRead])
@@ -37,7 +54,7 @@ def read_low_stock_products(
     current_user: User = Depends(require_trainer_or_admin)
 ):
     """Get products with low stock - Admin and Trainer access only"""
-    query = select(Product).where(Product.quantity <= threshold, Product.is_active == True)
+    query = select(Product).options(selectinload(Product.gym)).where(Product.quantity <= threshold, Product.is_active == True)
     
     # Filter by gym if specified
     if gym_id:
@@ -46,8 +63,9 @@ def read_low_stock_products(
     # If trainer, only show products from their gym
     if current_user.role == UserRole.TRAINER:
         query = query.where(Product.gym_id == current_user.gym_id)
-    
+
     products = session.exec(query).all()
+
     return products
 
 @router.post("/", response_model=ProductRead)
@@ -79,9 +97,13 @@ def read_product(
     current_user: User = Depends(get_current_active_user)
 ):
     """Get a specific product - Admin and Trainer access"""
-    product = session.exec(select(Product).where(Product.id == product_id)).first()
+    product = session.exec(select(Product).options(selectinload(Product.gym)).where(Product.id == product_id)).first()
+
     if product is None:
         raise HTTPException(status_code=404, detail="Product not found")
+    
+    check_trainer_gym( product.gym_id, current_user, trainer_message )
+
     return product
 
 @router.put("/{product_id}", response_model=ProductRead)

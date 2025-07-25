@@ -13,14 +13,9 @@ from app.models.gym import Gym
 from datetime import datetime, timedelta
 from decimal import Decimal 
 from app.models.read_models import UserPlanRead, UserRead, UserBase
+from app.core.methods import get_last_plan, check_gym, check_user_by_document_id, check_user_by_email
 
 router = APIRouter()
-
-def get_last_plan( user ):
-    for user_plan in user.user_plans:
-        return user_plan
-    
-    return None
 
 @router.get("/", response_model=List[UserRead])
 def read_users(
@@ -61,6 +56,7 @@ def read_users(
 
     return user_list
 
+
 @router.post("/admin-trainer", response_model=UserRead)
 def create_admin_or_trainer(
     user: UserCreateWithPassword,
@@ -76,28 +72,9 @@ def create_admin_or_trainer(
         )
     
     # Verify gym exists
-    gym = session.exec(select(Gym).where(Gym.id == user.gym_id, Gym.is_active == True)).first()
-    if not gym:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Gym not found or inactive"
-        )
-    
-    # Check if user already exists by email
-    existing_user = session.exec(select(User).where(User.email == user.email)).first()
-    if existing_user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already registered"
-        )
-    
-    # Check if document ID already exists
-    existing_doc = session.exec(select(User).where(User.document_id == user.document_id)).first()
-    if existing_doc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Document ID already registered"
-        )
+    check_gym( session, user.gym_id )
+    check_user_by_email( session, user.email, user.gym_id )
+    check_user_by_document_id( session, user.document_id, user.gym_id )
     
     # Create new user with password
     hashed_password = get_password_hash(user.password)
@@ -108,7 +85,6 @@ def create_admin_or_trainer(
     session.commit()
     session.refresh(db_user)
     return db_user
-
 
 
 @router.post("/with-plan", response_model=UserRead)
@@ -126,14 +102,8 @@ def create_user_with_plan(
             detail="Only regular users can be created with plans"
         )
     
-    # Verify gym exists
-    gym = session.exec(select(Gym).where(Gym.id == user.gym_id, Gym.is_active == True)).first()
-    if not gym:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Gym not found or inactive"
-        )
-    
+    check_gym( session, user.gym_id )
+
     # If trainer, only allow creating users in their gym
     if current_user.role == UserRole.TRAINER and user.gym_id != current_user.gym_id:
         raise HTTPException(
@@ -141,24 +111,12 @@ def create_user_with_plan(
             detail="You can only create users in your own gym"
         )
     
-    # Check if user already exists by email
-    existing_user = session.exec(select(User).where(User.email == user.email)).first()
-    if existing_user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already registered"
-        )
-    
-    # Check if document ID already exists
-    existing_doc = session.exec(select(User).where(User.document_id == user.document_id)).first()
-    if existing_doc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Document ID already registered"
-        )
+    check_user_by_email( session, user.email, user.gym_id )
+    check_user_by_document_id( session, user.document_id, user.gym_id )
     
     # Verify plan exists and is active and belongs to the same gym
     plan = session.exec(select(Plan).where(Plan.id == user.plan_id, Plan.is_active == True, Plan.gym_id == user.gym_id)).first()
+
     if not plan:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

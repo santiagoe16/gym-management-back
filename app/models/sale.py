@@ -26,8 +26,8 @@ class Sale(SaleBase, table=True):
 
 class SaleCreate(SQLModel):
     product_id: int
+    gym_id: int
     quantity: int
-    unit_price: Optional[Decimal] = None  # If not provided, will use product's current price
 
 class SaleUpdate(SQLModel):
     quantity: Optional[int] = None

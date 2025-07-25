@@ -1,7 +1,7 @@
 from enum import Enum
 from sqlmodel import SQLModel, Field, Relationship
 from typing import Optional, List
-from datetime import datetime, timezone
+from datetime import datetime, timezone, time
 
 class UserRole(str, Enum):
     ADMIN = "admin"
@@ -9,11 +9,11 @@ class UserRole(str, Enum):
     USER = "user"
 
 class UserBase(SQLModel):
-    email: str = Field(unique=True, index=True)
+    email: str = Field( index = True)
     full_name: str
-    document_id: str = Field(unique=True, index=True, description="Document ID number for user identification")
-    phone_number: str = Field(description="User's phone number")
-    gym_id: int = Field(foreign_key="gyms.id", description="Gym where the user belongs")
+    document_id: str = Field( index = True, description="Document ID number for user identification" )
+    phone_number: str
+    gym_id: int = Field( foreign_key="gyms.id", description="Gym where the user belongs" )
     role: UserRole = UserRole.USER
     is_active: bool = True
 
@@ -22,6 +22,8 @@ class User(UserBase, table=True):
     
     id: Optional[int] = Field(default=None, primary_key=True)
     hashed_password: Optional[str] = None  # Only for admin and trainer users
+    schedule_start: Optional[time] = None  # Only for trainer users
+    schedule_end: Optional[time] = None  # Only for trainer users
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     
@@ -38,12 +40,10 @@ class User(UserBase, table=True):
 # Schema for creating admin/trainer users (need password)
 class UserCreateWithPassword(UserBase):
     password: str
+    schedule_start: Optional[time] = None  # Only for trainer users
+    schedule_end: Optional[time] = None  # Only for trainer users
 
-# Schema for creating regular users (no password needed)
-class UserCreateWithoutPassword(UserBase):
-    pass
-
-class UserCreateWithPlan(UserCreateWithoutPassword):
+class UserCreateWithPlan(UserBase):
     plan_id: int
     purchased_price: Optional[float] = None  # If not provided, will use plan's base_price
 

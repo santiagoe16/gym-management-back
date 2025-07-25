@@ -10,6 +10,7 @@ from app.models.measurement import Measurement
 from app.models.attendance import Attendance
 from app.models.gym import Gym
 from decimal import Decimal
+from datetime import time, timedelta
 
 def init_db():
     create_db_and_tables()
@@ -45,6 +46,7 @@ def init_db():
                 hashed_password=get_password_hash("admin123"),
                 is_active=True
             )
+
             session.add(admin_user)
             
             # Create default trainer
@@ -54,6 +56,8 @@ def init_db():
                 document_id="TRAINER001",
                 phone_number="+1234567891",
                 gym_id=default_gym.id,
+                schedule_start= "08:00:00",
+                schedule_end= "12:00:00",
                 role=UserRole.TRAINER,
                 hashed_password=get_password_hash("trainer123"),
                 is_active=True

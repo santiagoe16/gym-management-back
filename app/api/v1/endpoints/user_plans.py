@@ -1,6 +1,7 @@
 from time import timezone
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from sqlalchemy.orm import selectinload
 from sqlmodel import Session, select
 from app.core.database import get_session
 from app.core.deps import require_admin, require_trainer_or_admin
@@ -22,7 +23,7 @@ def read_user_plans(
     current_user: User = Depends(require_trainer_or_admin)
 ):
     """Get all user plans - Admin and Trainer access only"""
-    query = select(UserPlan)
+    query = select(UserPlan).options(selectinload(UserPlan.user), selectinload(UserPlan.plan), selectinload(UserPlan.created_by))
     
     # Filter by user if specified
     if user_id:
@@ -61,7 +62,7 @@ def read_user_plans_by_user(
             detail="You can only access users in your own gym"
         )
     
-    user_plans = session.exec(select(UserPlan).where(UserPlan.user_id == user_id)).all()
+    user_plans = session.exec(select(UserPlan).options(selectinload(UserPlan.user), selectinload(UserPlan.plan), selectinload(UserPlan.created_by)).where(UserPlan.user_id == user_id)).all()
     return user_plans
 
 @router.get("/user/{user_id}/active", response_model=UserPlanRead)
@@ -88,7 +89,7 @@ def read_user_active_plan(
     
     # Get the active plan
     active_plan = session.exec(
-        select(UserPlan)
+        select(UserPlan).options(selectinload(UserPlan.user), selectinload(UserPlan.plan), selectinload(UserPlan.created_by))
         .where(UserPlan.user_id == user_id, UserPlan.is_active == True)
         .order_by(UserPlan.expires_at.desc())
     ).first()
