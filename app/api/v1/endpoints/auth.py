@@ -35,7 +35,7 @@ def login(login_data: LoginRequest, session: Session = Depends(get_session)):
             headers={"WWW-Authenticate": "Bearer"},
         )
     
-    if user.gym_id != login_data.gym_id:
+    if user.role == UserRole.TRAINER and user.gym_id != login_data.gym_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="User does not belong to this gym"

@@ -1,5 +1,5 @@
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, select, func
 from sqlalchemy.orm import selectinload
 from app.core.database import get_session
@@ -46,15 +46,7 @@ def read_measurements(
     
     measurements = session.exec(query.offset(skip).limit(limit)).all()
     
-    # Add user and recorded_by names
-    result = []
-    for measurement in measurements:
-        measurement_dict = measurement.model_dump()
-        measurement_dict["user_name"] = measurement.user.full_name if measurement.user else None
-        measurement_dict["recorded_by_name"] = measurement.recorded_by.full_name if measurement.recorded_by else None
-        result.append(MeasurementRead(**measurement_dict))
-    
-    return result
+    return measurements
 
 @router.get("/user/{user_id}", response_model=List[MeasurementRead])
 def read_user_measurements(
@@ -172,7 +164,7 @@ def get_user_progress(
     
     return {
         "user_id": user_id,
-        "user_name": user.full_name,
+        "user_name": measurements[0].user.full_name,
         "period": {
             "start_date": first_measurement.measurement_date.isoformat(),
             "end_date": last_measurement.measurement_date.isoformat(),

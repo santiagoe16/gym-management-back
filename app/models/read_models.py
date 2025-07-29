@@ -42,6 +42,8 @@ class UserRead(UserBase):
     updated_at: datetime
     gym: Union["GymRead", None] = Field(default=None)
     active_plan: Union["UserPlanRead", None] = Field(default=None)
+    schedule_start: Optional[str] = None
+    schedule_end: Optional[str] = None
 
 class UserPlanRead(UserPlanBase):
     id: int
@@ -49,7 +51,7 @@ class UserPlanRead(UserPlanBase):
     created_at: datetime
     updated_at: datetime 
     plan: Union["PlanRead", None] = Field(default=None)
-    created_by_user: Union["UserBase", None] = Field(default=None)
+    created_by: Union["UserBase", None] = Field(default=None)
     user: Union["UserRead", None] = Field(default=None)
 
 class SaleRead(SaleBase):
@@ -65,4 +67,4 @@ class MeasurementRead(MeasurementBase):
     created_at: datetime
     updated_at: datetime
     user: Union["UserRead", None] = None
-    recorded_by_user: Union["UserRead", None] = None 
+    recorded_by: Union["UserRead", None] = None 

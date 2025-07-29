@@ -22,8 +22,8 @@ class User(UserBase, table=True):
     
     id: Optional[int] = Field(default=None, primary_key=True)
     hashed_password: Optional[str] = None  # Only for admin and trainer users
-    schedule_start: Optional[time] = None  # Only for trainer users
-    schedule_end: Optional[time] = None  # Only for trainer users
+    schedule_start: Optional[str] = None  # Only for trainer users
+    schedule_end: Optional[str] = None  # Only for trainer users
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     
@@ -54,4 +54,7 @@ class UserUpdate(SQLModel):
     phone_number: Optional[str] = None
     gym_id: Optional[int] = None
     role: Optional[UserRole] = None
+    plan_id: Optional[int] = None
     is_active: Optional[bool] = None
+    schedule_start: Optional[str] = None
+    schedule_end: Optional[str] = None

@@ -321,6 +321,7 @@ def update_user(
     session.add(db_user)
     session.commit()
     session.refresh(db_user)
+    
     return db_user
 
 @router.delete("/{user_id}")
@@ -339,38 +340,6 @@ def delete_user(
     from app.models.sale import Sale
     from app.models.measurement import Measurement
     from app.models.attendance import Attendance
-    
-    # Check user plans
-    user_plans = session.exec(select(UserPlan).where(UserPlan.user_id == user_id)).all()
-    if user_plans:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot delete user with existing plans. Deactivate the user instead."
-        )
-    
-    # Check sales
-    sales = session.exec(select(Sale).where(Sale.sold_by_id == user_id)).all()
-    if sales:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot delete user with existing sales records. Deactivate the user instead."
-        )
-    
-    # Check measurements
-    measurements = session.exec(select(Measurement).where(Measurement.user_id == user_id)).all()
-    if measurements:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot delete user with existing measurements. Deactivate the user instead."
-        )
-    
-    # Check attendance records
-    attendance = session.exec(select(Attendance).where(Attendance.user_id == user_id)).all()
-    if attendance:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot delete user with existing attendance records. Deactivate the user instead."
-        )
     
     # If no related data, safe to delete
     session.delete(db_user)
