@@ -5,7 +5,6 @@ from decimal import Decimal
 
 class MeasurementBase(SQLModel):
     user_id: int = Field(foreign_key="users.id", description="User whose measurements are being recorded")
-    recorded_by_id: int = Field(foreign_key="users.id", description="Admin or trainer who recorded the measurements")
     
     # Body measurements (in cm)
     height: Optional[Decimal] = Field(None, description="Height in cm")
@@ -35,6 +34,8 @@ class MeasurementBase(SQLModel):
 
 class Measurement(MeasurementBase, table=True):
     __tablename__ = "measurements"
+    
+    recorded_by_id: int = Field(foreign_key="users.id", description="Admin or trainer who recorded the measurements")
     
     id: Optional[int] = Field(default=None, primary_key=True)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
