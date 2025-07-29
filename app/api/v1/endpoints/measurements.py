@@ -190,6 +190,7 @@ def create_measurement(
     
     # Create new measurement
     db_measurement = Measurement.model_validate(measurement)
+    db_measurement.recorded_by_id = current_user.id
     
     session.add(db_measurement)
     session.commit()
