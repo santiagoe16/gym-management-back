@@ -10,7 +10,6 @@ from app.models.user import User, UserCreateWithPassword, UserCreateWithPlan, Us
 from app.models.plan import Plan
 from app.models.user_plan import UserPlan
 from datetime import datetime, timedelta
-from decimal import Decimal 
 from app.models.read_models import UserPlanRead, UserRead, UserBase
 from app.core.methods import get_last_plan, check_gym, check_user_by_document_id, check_user_by_email
 
@@ -49,7 +48,7 @@ def read_users(
 
         if user_data.active_plan:
             created_by_user = session.exec( select( User ).where( User.id == user_data.active_plan.created_by_id ) ).first()
-            user_data.active_plan.created_by_user = UserBase.model_validate(created_by_user) if created_by_user else None
+            user_data.active_plan.created_by = UserRead.model_validate(created_by_user) if created_by_user else None
 
         user_list.append(user_data)
 
@@ -182,7 +181,7 @@ def search_user_by_document_id(
 
     if user_data.active_plan is not None:
         created_by_user = session.exec( select( User ).where( User.id == user_data.active_plan.created_by_id ) ).first()
-        user_data.active_plan.created_by_user = UserBase.model_validate(created_by_user) if created_by_user else None
+        user_data.active_plan.created_by = UserBase.model_validate(created_by_user) if created_by_user else None
 
     return user_data
 
@@ -220,7 +219,7 @@ def search_users_by_phone(
 
         if user_data.active_plan is not None:
             created_by_user = session.exec( select( User ).where( User.id == user_data.active_plan.created_by_id ) ).first()
-            user_data.active_plan.created_by_user = UserBase.model_validate(created_by_user) if created_by_user else None
+            user_data.active_plan.created_by = UserBase.model_validate(created_by_user) if created_by_user else None
 
         user_list.append(user_data)
 
@@ -250,7 +249,7 @@ def read_user(
     
     if user_data.active_plan:
         created_by_user = session.exec( select( User ).where( User.id == user_data.active_plan.created_by_id ) ).first()
-        user_data.active_plan.created_by_user = UserBase.model_validate(created_by_user) if created_by_user else None
+        user_data.active_plan.created_by = UserRead.model_validate(created_by_user) if created_by_user else None
 
     return user_data
 
