@@ -13,7 +13,6 @@ class UserBase(SQLModel):
     full_name: str
     document_id: str = Field( index = True, description="Document ID number for user identification" )
     phone_number: str
-    gym_id: int = Field( foreign_key="gyms.id", description="Gym where the user belongs" )
     role: UserRole = UserRole.USER
     is_active: bool = True
 
@@ -21,6 +20,7 @@ class User(UserBase, table=True):
     __tablename__ = "users"
     
     id: Optional[int] = Field(default=None, primary_key=True)
+    gym_id: int = Field( foreign_key="gyms.id", description="Gym where the user belongs" )
     hashed_password: Optional[str] = None  # Only for admin and trainer users
     schedule_start: Optional[str] = None  # Only for trainer users
     schedule_end: Optional[str] = None  # Only for trainer users
@@ -39,11 +39,13 @@ class User(UserBase, table=True):
 
 # Schema for creating admin/trainer users (need password)
 class UserCreateWithPassword(UserBase):
+    gym_id: int
     password: str
     schedule_start: Optional[time] = None  # Only for trainer users
     schedule_end: Optional[time] = None  # Only for trainer users
 
 class UserCreateWithPlan(UserBase):
+    gym_id: Optional[int] = None
     plan_id: int
     purchased_price: Optional[float] = None  # If not provided, will use plan's base_price
 

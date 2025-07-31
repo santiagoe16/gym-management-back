@@ -29,10 +29,15 @@ def run_test_module(module_name, description):
     print("=" * 60)
     
     try:
-        result = subprocess.run([sys.executable, module_name], 
+        # Get the directory where this script is located
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        module_path = os.path.join(script_dir, module_name)
+        
+        result = subprocess.run([sys.executable, module_path], 
                               capture_output=True, 
                               text=True, 
-                              check=False)
+                              check=False,
+                              cwd=script_dir)  # Run from the tests directory
         
         if result.returncode == 0:
             print(f"PASS {description} completed successfully")
@@ -88,14 +93,18 @@ def main():
     total_modules = len(TEST_MODULES)
     
     for module in TEST_MODULES:
-        if os.path.exists(module):
+        # Get the directory where this script is located
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        module_path = os.path.join(script_dir, module)
+        
+        if os.path.exists(module_path):
             description = module.replace("test_", "").replace(".py", "").title()
             success = run_test_module(module, description)
             results[module] = success
             if success:
                 total_passed += 1
         else:
-            print(f"⚠️  Test module {module} not found, skipping...")
+            print(f"⚠️  Test module {module} not found at {module_path}, skipping...")
             results[module] = False
     
     # Print summary
