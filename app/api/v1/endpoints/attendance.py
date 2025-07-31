@@ -7,7 +7,7 @@ from app.models.user import User, UserRole
 from app.models.attendance import Attendance, AttendanceCreate, AttendanceUpdate
 from datetime import datetime, date, timezone
 from app.models.read_models import AttendanceRead
-from app.core.methods import check_gym, check_user_by_id, get_user_by_id
+from app.core.methods import check_gym, get_user_by_id
 
 router = APIRouter()
 

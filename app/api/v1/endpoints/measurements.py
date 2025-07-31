@@ -19,14 +19,13 @@ def read_measurements(
     skip: int = 0,
     limit: int = 100,
     user_id: Optional[int] = Query(None, description="Filter by user ID"),
-    gym_id: Optional[int] = Query(None, description="Filter by gym ID"),
     start_date: Optional[date] = Query(None, description="Filter measurements from this date"),
     end_date: Optional[date] = Query(None, description="Filter measurements until this date"),
     session: Session = Depends(get_session),
     current_user: User = Depends(require_trainer_or_admin)
 ):
     """Get all measurements - Admin and Trainer access only"""
-    query = select(Measurement).options(selectinload(Measurement.user), selectinload(Measurement.recorded_by))
+    query = select( Measurement ).options( selectinload( Measurement.user ), selectinload( Measurement.recorded_by ) )
     
     # Apply filters
     if user_id:
@@ -36,14 +35,6 @@ def read_measurements(
     if end_date:
         query = query.where(func.date(Measurement.measurement_date) <= end_date)
     
-    # If trainer, only show measurements from their gym
-    if current_user.role == UserRole.TRAINER:
-        query = query.join(User, Measurement.user_id == User.id).where(User.gym_id == current_user.gym_id)
-    
-    # If gym_id filter is specified, apply it
-    if gym_id:
-        query = query.join(User, Measurement.user_id == User.id).where(User.gym_id == gym_id)
-    
     measurements = session.exec(query.offset(skip).limit(limit)).all()
     
     return measurements
@@ -51,18 +42,13 @@ def read_measurements(
 @router.get("/user/{user_id}", response_model=List[MeasurementRead])
 def read_user_measurements(
     user_id: int,
-    gym_id: int,
     skip: int = 0,
     limit: int = 100,
     session: Session = Depends(get_session),
     current_user: User = Depends(require_trainer_or_admin)
 ):
     """Get all measurements for a specific user - Admin and Trainer access only"""
-    check_gym( session, gym_id )
-
-    check_trainer_gym( gym_id, current_user, trainer_message )
-    
-    check_user_by_id( session, user_id, gym_id )
+    check_user_by_id( session, user_id )
     
     measurements = session.exec(
         select(Measurement).options(selectinload(Measurement.user), selectinload(Measurement.recorded_by))
@@ -77,16 +63,11 @@ def read_user_measurements(
 @router.get("/user/{user_id}/latest", response_model=MeasurementRead)
 def get_latest_measurement(
     user_id: int,
-    gym_id: int,
     session: Session = Depends(get_session),
     current_user: User = Depends(require_trainer_or_admin)
 ):
     """Get the latest measurement for a specific user - Admin and Trainer access only"""
-    check_gym( session, gym_id )
-    
-    check_trainer_gym( gym_id, current_user, trainer_message )
-    
-    check_user_by_id( session, user_id, gym_id )
+    check_user_by_id( session, user_id )
     
     measurement = session.exec(
         select(Measurement).options(selectinload(Measurement.user), selectinload(Measurement.recorded_by))
@@ -102,18 +83,13 @@ def get_latest_measurement(
 @router.get("/user/{user_id}/progress")
 def get_user_progress(
     user_id: int,
-    gym_id: int,
     start_date: Optional[date] = Query(None, description="Start date for progress calculation"),
     end_date: Optional[date] = Query(None, description="End date for progress calculation"),
     session: Session = Depends(get_session),
     current_user: User = Depends(require_trainer_or_admin)
 ):
     """Get progress summary for a specific user - Admin and Trainer access only"""
-    check_gym( session, gym_id )
-
-    check_trainer_gym( gym_id, current_user, trainer_message )
-    
-    check_user_by_id( session, user_id, gym_id )
+    check_user_by_id( session, user_id )
     
     query = select(Measurement).options(selectinload(Measurement.user), selectinload(Measurement.recorded_by)).where(Measurement.user_id == user_id)
     
@@ -177,16 +153,11 @@ def get_user_progress(
 @router.post("/", response_model=MeasurementRead)
 def create_measurement(
     measurement: MeasurementCreate,
-    gym_id: int,
     session: Session = Depends(get_session),
     current_user: User = Depends(require_trainer_or_admin)
 ):
     """Create a new measurement - Admin and Trainer access only"""
-    check_gym( session, gym_id )
-
-    check_trainer_gym( gym_id, current_user, trainer_message )
-
-    check_user_by_id( session, measurement.user_id, gym_id )
+    check_user_by_id( session, measurement.user_id )
 
     measurement.recorded_by_id = current_user.id
     
@@ -208,11 +179,6 @@ def read_measurement(
     if measurement is None:
         raise HTTPException(status_code=404, detail="Measurement not found")
     
-    if( current_user.role == UserRole.TRAINER ):
-        user = session.exec( select(User).where( User.id == measurement.user_id ) ).first()
-
-        check_trainer_gym( user.gym_id, current_user, trainer_message )
-    
     return measurement
 
 @router.put("/{measurement_id}", response_model=MeasurementRead)
@@ -226,11 +192,6 @@ def update_measurement(
     measurement = session.exec(select(Measurement).where(Measurement.id == measurement_id)).first()
     if measurement is None:
         raise HTTPException(status_code=404, detail="Measurement not found")
-    
-    if( current_user.role == UserRole.TRAINER ):
-        user = session.exec( select(User).where( User.id == measurement.user_id ) ).first()
-
-        check_trainer_gym( user.gym_id, current_user, trainer_message )
     
     # Update measurement data
     measurement_data = measurement_update.model_dump(exclude_unset=True)
@@ -253,11 +214,6 @@ def delete_measurement(
     if measurement is None:
         raise HTTPException(status_code=404, detail="Measurement not found")
     
-    if( current_user.role == UserRole.TRAINER ):
-        user = session.exec( select(User).where( User.id == measurement.user_id ) ).first()
-
-        check_trainer_gym( user.gym_id, current_user, trainer_message )
-
     session.delete(measurement)
     session.commit()
     
