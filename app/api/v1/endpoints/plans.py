@@ -75,7 +75,7 @@ def read_plan(
     current_user: User = Depends(get_current_active_user)
 ):
     """Get a specific plan - Admin and Trainer access"""
-    plan = session.exec( select( Plan ).options( selectinload( Plan.gym ).where( Plan.id == plan_id ) ) ).first()
+    plan = session.exec( select( Plan ).options( selectinload( Plan.gym ) ).where( Plan.id == plan_id ) ).first()
 
     if plan is None:
         raise HTTPException(status_code=404, detail="Plan not found")

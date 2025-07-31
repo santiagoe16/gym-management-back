@@ -2,6 +2,7 @@ from sqlmodel import SQLModel, Field, Relationship
 from typing import Optional
 from datetime import datetime, timezone
 from decimal import Decimal
+from pydantic import field_serializer
 
 class MeasurementBase(SQLModel):
     user_id: int = Field(foreign_key="users.id", description="User whose measurements are being recorded")
@@ -32,6 +33,15 @@ class MeasurementBase(SQLModel):
     notes: Optional[str] = Field(None, description="Additional notes about the measurements")
     measurement_date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="Date when measurements were taken")
 
+    # Custom serializers for Decimal fields
+    @field_serializer('height', 'weight', 'chest', 'shoulders', 'biceps_left', 'biceps_right', 
+                     'forearms_left', 'forearms_right', 'abdomen', 'hips', 'thighs_left', 
+                     'thighs_right', 'calves_left', 'calves_right')
+    def serialize_decimal(self, value: Optional[Decimal]) -> Optional[float]:
+        if value is not None:
+            return float(value)
+        return None
+
 class Measurement(MeasurementBase, table=True):
     __tablename__ = "measurements"
     
@@ -46,7 +56,7 @@ class Measurement(MeasurementBase, table=True):
     recorded_by: "User" = Relationship(back_populates="recorded_measurements", sa_relationship_kwargs={"foreign_keys": "[Measurement.recorded_by_id]"})
 
 class MeasurementCreate(MeasurementBase):
-    pass
+    recorded_by_id: Optional[int] = None
 
 class MeasurementUpdate(SQLModel):
     height: Optional[Decimal] = None
@@ -65,3 +75,12 @@ class MeasurementUpdate(SQLModel):
     calves_right: Optional[Decimal] = None
     notes: Optional[str] = None
     measurement_date: Optional[datetime] = None
+
+    # Custom serializers for Decimal fields
+    @field_serializer('height', 'weight', 'chest', 'shoulders', 'biceps_left', 'biceps_right', 
+                     'forearms_left', 'forearms_right', 'abdomen', 'hips', 'thighs_left', 
+                     'thighs_right', 'calves_left', 'calves_right')
+    def serialize_decimal(self, value: Optional[Decimal]) -> Optional[float]:
+        if value is not None:
+            return float(value)
+        return None

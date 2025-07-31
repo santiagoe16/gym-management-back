@@ -187,10 +187,10 @@ def create_measurement(
     check_trainer_gym( gym_id, current_user, trainer_message )
 
     check_user_by_id( session, measurement.user_id, gym_id )
+
+    measurement.recorded_by_id = current_user.id
     
-    # Create new measurement
     db_measurement = Measurement.model_validate(measurement)
-    db_measurement.recorded_by_id = current_user.id
     
     session.add(db_measurement)
     session.commit()
