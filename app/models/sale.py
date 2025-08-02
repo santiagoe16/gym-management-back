@@ -26,7 +26,7 @@ class Sale(SaleBase, table=True):
 
 class SaleCreate(SQLModel):
     product_id: int
-    gym_id: int
+    gym_id: Optional[int] = None
     quantity: int
 
 class SaleUpdate(SQLModel):

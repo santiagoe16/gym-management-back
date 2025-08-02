@@ -9,6 +9,9 @@ from app.core.deps import require_admin, require_trainer_or_admin
 from app.models.user import User, UserCreateWithPassword, UserCreateWithPlan, UserUpdate, UserRole
 from app.models.plan import Plan
 from app.models.user_plan import UserPlan
+from app.models.sale import Sale
+from app.models.measurement import Measurement
+from app.models.attendance import Attendance
 from datetime import datetime, timedelta
 from app.models.read_models import UserPlanRead, UserRead, UserBase
 from app.core.methods import get_last_plan, check_gym, check_user_by_document_id, check_user_by_document_id_and_gym, check_user_by_email, check_user_by_email_and_gym
@@ -409,9 +412,6 @@ def delete_user(
     
     # Check if user has any related data that would prevent deletion
     from app.models.user_plan import UserPlan
-    from app.models.sale import Sale
-    from app.models.measurement import Measurement
-    from app.models.attendance import Attendance
     
     # Check for related data
     user_plans = session.exec(select(UserPlan).where(UserPlan.user_id == user_id)).all()

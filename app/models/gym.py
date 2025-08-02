@@ -19,6 +19,7 @@ class Gym(GymBase, table=True):
     plans: List["Plan"] = Relationship(back_populates="gym")
     products: List["Product"] = Relationship(back_populates="gym")
     sales: List["Sale"] = Relationship(back_populates="gym")
+    attendance: List["Attendance"] = Relationship(back_populates="gym")
 
 class GymCreate(GymBase):
     pass

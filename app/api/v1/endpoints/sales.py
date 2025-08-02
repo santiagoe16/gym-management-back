@@ -4,7 +4,6 @@ from sqlmodel import Session, select, func
 from sqlalchemy.orm import selectinload
 from app.core.database import get_session
 from app.core.deps import require_admin, require_trainer_or_admin
-from app.core.methods import check_trainer_gym
 from app.models.user import User, UserRole
 from app.models.product import Product
 from app.models.sale import Sale, SaleCreate, SaleUpdate
@@ -23,9 +22,17 @@ def create_sale(
     current_user: User = Depends(require_trainer_or_admin)
 ):
     """Create a new sale - Admin and Trainer access (both can sell products)"""
-    check_trainer_gym( sale.gym_id, current_user, trainer_message_create )
+    
+    query = select( Product ).options( 
+        selectinload( Product.gym ) 
+    ).where( Product.id == sale.product_id, Product.is_active == True )
 
-    product = session.exec(select(Product).options(selectinload(Product.gym)).where(Product.id == sale.product_id, Product.is_active == True, Product.gym_id == sale.gym_id)).first()
+    if( current_user.role == UserRole.TRAINER ):
+        query = query.where( Product.gym_id == current_user.gym_id )
+    else:
+        query = query.where( Product.gym_id == sale.gym_id )
+
+    product = session.exec( query ).first()
 
     if not product:
         raise HTTPException(

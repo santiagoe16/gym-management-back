@@ -14,11 +14,6 @@ from app.models.measurement import MeasurementBase
 if TYPE_CHECKING:
     from app.models.read_models import UserRead, PlanRead, GymRead, UserPlanRead, ProductRead
 
-class AttendanceRead(AttendanceBase):
-    id: int
-    created_at: datetime
-    updated_at: datetime 
-
 class GymRead(GymBase):
     id: int
     created_at: datetime
@@ -44,6 +39,14 @@ class UserRead(UserBase):
     active_plan: Union["UserPlanRead", None] = Field(default=None)
     schedule_start: Optional[str] = None
     schedule_end: Optional[str] = None
+
+class AttendanceRead(AttendanceBase):
+    id: int
+    created_at: datetime
+    updated_at: datetime
+    user: Union["UserRead", None] = Field(default=None)
+    recorded_by: Union["UserBase", None] = Field(default=None)
+    gym: Union["GymRead", None] = Field(default=None)
 
 class UserPlanRead(UserPlanBase):
     id: int

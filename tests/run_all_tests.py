@@ -14,10 +14,10 @@ TEST_MODULES = [
     "test_users.py",
     "test_gyms.py", 
     "test_plans.py",
-    "test_measurements.py"
+    "test_measurements.py",
+    "test_sales.py"
     # Add more test modules as they are created:
     # "test_products.py",
-    # "test_sales.py",
     # "test_attendance.py",
     # "test_user_plans.py",
     # "test_auth.py"

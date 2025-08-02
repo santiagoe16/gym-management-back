@@ -41,8 +41,8 @@ class User(UserBase, table=True):
 class UserCreateWithPassword(UserBase):
     gym_id: int
     password: str
-    schedule_start: Optional[time] = None  # Only for trainer users
-    schedule_end: Optional[time] = None  # Only for trainer users
+    schedule_start: Optional[str] = None  # Only for trainer users
+    schedule_end: Optional[str] = None  # Only for trainer users
 
 class UserCreateWithPlan(UserBase):
     gym_id: Optional[int] = None

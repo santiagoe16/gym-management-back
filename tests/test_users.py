@@ -258,7 +258,9 @@ class UserEndpointTester:
             "phone_number": "2222222222",
             "gym_id": self.test_gym_id,
             "role": "trainer",
-            "password": "newtrainerpass123"
+            "password": "newtrainerpass123",
+            "schedule_start": "8",
+            "schedule_end": "12"
         }
         
         try:
