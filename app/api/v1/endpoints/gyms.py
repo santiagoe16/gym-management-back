@@ -41,7 +41,7 @@ def create_gym(
     if existing_gym:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Gym with this name already exists"
+            detail="Ya existe un gimnasio con este nombre"
         )
     
     # Create new gym
@@ -61,7 +61,7 @@ def read_gym(
     """Get a specific gym - All authenticated users can view"""
     gym = session.exec(select(Gym).where(Gym.id == gym_id)).first()
     if gym is None:
-        raise HTTPException(status_code=404, detail="Gym not found")
+        raise HTTPException(status_code=404, detail="Gimnasio no encontrado")
     return gym
 
 @router.put("/{gym_id}", response_model=GymRead)
@@ -74,7 +74,7 @@ def update_gym(
     """Update a gym - Admin access only"""
     db_gym = session.exec(select(Gym).where(Gym.id == gym_id)).first()
     if db_gym is None:
-        raise HTTPException(status_code=404, detail="Gym not found")
+        raise HTTPException(status_code=404, detail="Gimnasio no encontrado")
     
     # Update gym data
     gym_data = gym_update.model_dump(exclude_unset=True)
@@ -96,7 +96,7 @@ def delete_gym(
     db_gym = session.exec(select(Gym).where(Gym.id == gym_id)).first()
 
     if db_gym is None:
-        raise HTTPException(status_code=404, detail="Gym not found")
+        raise HTTPException(status_code=404, detail="Gimnasio no encontrado")
     
     # Check if gym has any related data that would prevent deletion
     from app.models.user import User
@@ -144,4 +144,4 @@ def delete_gym(
     session.delete(db_gym)
     session.commit()
     
-    return {"message": "Gym deleted successfully"} 
+    return {"message": "Gimnasio eliminado exitosamente"} 

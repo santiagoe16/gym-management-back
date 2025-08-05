@@ -59,70 +59,93 @@ class UserEndpointTester:
         """Setup test data (gym, plan) if needed"""
         print("Setting up test data...")
         
-        # Try to create a test gym if it doesn't exist
-        gym_data = {
-            "name": "Test Gym",
-            "address": "123 Test Street",
-            "is_active": True
-        }
-        
+        # First, try to get existing gyms to find one we can use
         try:
-            response = requests.post(f"{self.base_url}/gyms/", json=gym_data, headers={
+            response = requests.get(f"{self.base_url}/gyms/", headers={
                 "Authorization": f"Bearer {self.admin_token}"
             })
             if response.status_code == 200:
-                self.test_gym_id = response.json()["id"]
-                self.created_gyms.append(self.test_gym_id)
-                print(f"Created test gym with ID: {self.test_gym_id}")
-            elif response.status_code == 400 and "already exists" in response.text.lower():
-                # Try to find existing gym
-                response = requests.get(f"{self.base_url}/gyms/", headers={
-                    "Authorization": f"Bearer {self.admin_token}"
-                })
-                if response.status_code == 200:
-                    gyms = response.json()
-                    for gym in gyms:
-                        if gym["name"] == "Test Gym":
-                            self.test_gym_id = gym["id"]
-                            print(f"Using existing test gym with ID: {self.test_gym_id}")
-                            break
+                gyms = response.json()
+                if gyms:
+                    # Use the first available gym
+                    self.test_gym_id = gyms[0]["id"]
+                    print(f"Using existing gym with ID: {self.test_gym_id}")
+                else:
+                    # No gyms exist, try to create one
+                    gym_data = {
+                        "name": f"Test Gym {datetime.now().timestamp()}",
+                        "address": "123 Test Street",
+                        "is_active": True
+                    }
+                    
+                    response = requests.post(f"{self.base_url}/gyms/", json=gym_data, headers={
+                        "Authorization": f"Bearer {self.admin_token}"
+                    })
+                    if response.status_code == 200:
+                        self.test_gym_id = response.json()["id"]
+                        self.created_gyms.append(self.test_gym_id)
+                        print(f"Created test gym with ID: {self.test_gym_id}")
+                    else:
+                        print(f"Failed to create gym: {response.text}")
+                        return
+            else:
+                print(f"Failed to get gyms: {response.text}")
+                return
         except Exception as e:
             print(f"Error setting up gym: {str(e)}")
+            return
         
-        # Try to create a test plan if it doesn't exist
-        # Use gym_id=16 since that's where the admin user is from
-        plan_data = {
-            "name": f"Test Plan {datetime.now().timestamp()}",
-            "description": "A test plan for testing",
-            "price": 50.0,
-            "duration_days": 30,
-            "gym_id": 16,  # Use gym 16 to match admin user's gym
-            "is_active": True
-        }
-        
+        # Now try to get existing plans or create one
         try:
-            response = requests.post(f"{self.base_url}/plans/", json=plan_data, headers={
+            response = requests.get(f"{self.base_url}/plans/", headers={
                 "Authorization": f"Bearer {self.admin_token}"
             })
             if response.status_code == 200:
-                self.test_plan_id = response.json()["id"]
-                self.created_plans.append(self.test_plan_id)
-                print(f"Created test plan with ID: {self.test_plan_id}")
-            elif response.status_code == 400 and "already exists" in response.text.lower():
-                # Try to find existing plan
-                response = requests.get(f"{self.base_url}/plans/", headers={
-                    "Authorization": f"Bearer {self.admin_token}"
-                })
-                if response.status_code == 200:
-                    plans = response.json()
-                    # Use the first plan in gym 16 as fallback
-                    for plan in plans:
-                        if plan.get("gym_id") == 16:
-                            self.test_plan_id = plan["id"]
-                            print(f"Using existing plan in gym 16 with ID: {self.test_plan_id}")
-                            break
+                plans = response.json()
+                # Look for a plan in the same gym as the admin user (gym 16)
+                for plan in plans:
+                    if plan.get("gym_id") == 16:
+                        self.test_plan_id = plan["id"]
+                        print(f"Using existing plan in gym 16 with ID: {self.test_plan_id}")
+                        break
+                
+                # If no plan found in gym 16, use any available plan
+                if not self.test_plan_id and plans:
+                    self.test_plan_id = plans[0]["id"]
+                    print(f"Using existing plan with ID: {self.test_plan_id}")
+                
+                # If still no plan, create one
+                if not self.test_plan_id:
+                    plan_data = {
+                        "name": f"Test Plan {datetime.now().timestamp()}",
+                        "description": "A test plan for testing",
+                        "price": 50.0,
+                        "duration_days": 30,
+                        "gym_id": 16,  # Use gym 16 to match admin user's gym
+                        "is_active": True
+                    }
+                    
+                    response = requests.post(f"{self.base_url}/plans/", json=plan_data, headers={
+                        "Authorization": f"Bearer {self.admin_token}"
+                    })
+                    if response.status_code == 200:
+                        self.test_plan_id = response.json()["id"]
+                        self.created_plans.append(self.test_plan_id)
+                        print(f"Created test plan with ID: {self.test_plan_id}")
+                    else:
+                        print(f"Failed to create plan: {response.text}")
+            else:
+                print(f"Failed to get plans: {response.text}")
         except Exception as e:
             print(f"Error setting up plan: {str(e)}")
+        
+        # Verify we have the required data
+        if not self.test_gym_id:
+            print("ERROR: Could not set up test gym")
+        if not self.test_plan_id:
+            print("ERROR: Could not set up test plan")
+        if self.test_gym_id and self.test_plan_id:
+            print(f"Test data setup complete: Gym ID {self.test_gym_id}, Plan ID {self.test_plan_id}")
     
     def cleanup_test_data(self):
         """Clean up all test data created during tests"""

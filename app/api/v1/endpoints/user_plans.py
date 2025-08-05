@@ -31,11 +31,11 @@ def read_user_plans(
     
     # Filter by gym if specified
     if gym_id:
-        query = query.join(User).where(User.gym_id == gym_id)
+        query = query.join(User, UserPlan.user_id == User.id).where(User.gym_id == gym_id)
     
     # If trainer, only show user plans from their gym
     if current_user.role == UserRole.TRAINER:
-        query = query.join(User).where(User.gym_id == current_user.gym_id)
+        query = query.join(User, UserPlan.user_id == User.id).where(User.gym_id == current_user.gym_id)
     
     user_plans = session.exec(query.offset(skip).limit(limit)).all()
     return user_plans

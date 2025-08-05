@@ -6,7 +6,7 @@ from app.models.attendance import AttendanceBase
 from app.models.gym import GymBase
 from app.models.user_plan import UserPlanBase
 from app.models.user import UserBase
-from app.models.plan import PlanBase
+from app.models.plan import PlanBase, PlanRole
 from app.models.sale import SaleBase
 from app.models.product import ProductBase
 from app.models.measurement import MeasurementBase
@@ -24,6 +24,8 @@ class PlanRead(PlanBase):
     created_at: datetime
     updated_at: datetime
     gym: Union["GymRead", None] = Field(default=None)
+    role: PlanRole = PlanRole.REGULAR
+    days: Optional[int] = None
 
 class ProductRead(ProductBase):
     id: int

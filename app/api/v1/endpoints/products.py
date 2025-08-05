@@ -80,7 +80,7 @@ def create_product(
     if existing_product:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Product with this name already exists"
+            detail="Ya existe un producto con este nombre"
         )
     
     db_product = Product.model_validate(product)
@@ -100,7 +100,7 @@ def read_product(
     product = session.exec(select(Product).options(selectinload(Product.gym)).where(Product.id == product_id)).first()
 
     if product is None:
-        raise HTTPException(status_code=404, detail="Product not found")
+        raise HTTPException(status_code=404, detail="Producto no encontrado")
     
     check_trainer_gym( product.gym_id, current_user, trainer_message )
 
@@ -116,7 +116,7 @@ def update_product(
     """Update a product - Admin access only"""
     db_product = session.exec(select(Product).where(Product.id == product_id)).first()
     if db_product is None:
-        raise HTTPException(status_code=404, detail="Product not found")
+        raise HTTPException(status_code=404, detail="Producto no encontrado")
     
     # Update product data
     product_data = product_update.model_dump(exclude_unset=True)
@@ -137,11 +137,11 @@ def delete_product(
     """Delete a product - Admin access only"""
     db_product = session.exec(select(Product).where(Product.id == product_id)).first()
     if db_product is None:
-        raise HTTPException(status_code=404, detail="Product not found")
+        raise HTTPException(status_code=404, detail="Producto no encontrado")
     
     session.delete(db_product)
     session.commit()
-    return {"message": "Product deleted successfully"}
+    return {"message": "Producto eliminado exitosamente"}
 
 @router.put("/{product_id}/stock")
 def update_stock(
@@ -153,22 +153,22 @@ def update_stock(
     """Update product stock quantity - Admin access only"""
     db_product = session.exec(select(Product).where(Product.id == product_id)).first()
     if db_product is None:
-        raise HTTPException(status_code=404, detail="Product not found")
+        raise HTTPException(status_code=404, detail="Producto no encontrado")
     
     if quantity < 0:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Stock quantity cannot be negative"
+            detail="La cantidad de stock no puede ser negativa"
         )
     
     if quantity > 999999999:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Stock quantity cannot exceed 999,999,999"
+            detail="La cantidad de stock no puede exceder 999,999,999"
         )
     
     db_product.quantity = quantity
     session.add(db_product)
     session.commit()
     session.refresh(db_product)
-    return {"message": f"Stock updated to {quantity} units"} 
+    return {"message": f"Stock actualizado a {quantity} unidades"} 

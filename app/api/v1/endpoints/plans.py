@@ -12,7 +12,7 @@ from app.models.plan import Plan, PlanCreate, PlanUpdate
 
 router = APIRouter()
 
-trainer_message = "You can only view plans for users in your gym"
+trainer_message = "Solo puedes ver planes para usuarios en tu gimnasio"
 
 @router.get("/", response_model=List[PlanRead])
 def read_plans(
@@ -58,7 +58,7 @@ def create_plan(
     if existing_plan:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Plan with this name already exists"
+            detail="Ya existe un plan con este nombre"
         )
     
     db_plan = Plan.model_validate(plan)
@@ -78,7 +78,7 @@ def read_plan(
     plan = session.exec( select( Plan ).options( selectinload( Plan.gym ) ).where( Plan.id == plan_id ) ).first()
 
     if plan is None:
-        raise HTTPException(status_code=404, detail="Plan not found")
+        raise HTTPException(status_code=404, detail="Plan no encontrado")
     
     check_trainer_gym( plan.gym_id, current_user, trainer_message )
     
@@ -94,7 +94,7 @@ def update_plan(
     """Update a plan - Admin access only"""
     db_plan = session.exec(select(Plan).where(Plan.id == plan_id)).first()
     if db_plan is None:
-        raise HTTPException(status_code=404, detail="Plan not found")
+        raise HTTPException(status_code=404, detail="Plan no encontrado")
     
     # Update plan data
     plan_data = plan_update.model_dump(exclude_unset=True)
@@ -115,8 +115,8 @@ def delete_plan(
     """Delete a plan - Admin access only"""
     db_plan = session.exec(select(Plan).where(Plan.id == plan_id)).first()
     if db_plan is None:
-        raise HTTPException(status_code=404, detail="Plan not found")
+        raise HTTPException(status_code=404, detail="Plan no encontrado")
     
     session.delete(db_plan)
     session.commit()
-    return {"message": "Plan deleted successfully"} 
+    return {"message": "Plan eliminado exitosamente"} 

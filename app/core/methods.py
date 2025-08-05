@@ -2,15 +2,38 @@
 from sqlmodel import Session, select
 from app.models.user import User, UserRole
 from app.models.gym import Gym
+from app.models.user import User
+from app.models.read_models import UserPlanRead
 from fastapi import HTTPException, status
+from datetime import datetime, timezone
 
-def get_last_plan( user ):
-    """Get the most recent active plan for a user"""
+def get_last_plan( user: User ) -> UserPlanRead:
+    """Get the most recent active and valid plan for a user"""
     if not user.user_plans:
         return None
     
-    # Get the most recent plan by purchased_at timestamp (matches relationship ordering)
-    latest_plan = max(user.user_plans, key=lambda up: up.purchased_at)
+    # Get active plans that haven't expired
+    current_time = datetime.now(timezone.utc)
+    valid_plans = []
+    
+    for up in user.user_plans:
+        if not up.is_active:
+            continue
+            
+        # Ensure expires_at is timezone-aware
+        expires_at = up.expires_at
+        if expires_at.tzinfo is None:
+            # If timezone-naive, assume UTC
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        
+        if expires_at > current_time:
+            valid_plans.append(up)
+    
+    if not valid_plans:
+        return None
+    
+    # Get the most recent valid plan by purchased_at timestamp
+    latest_plan = max(valid_plans, key=lambda up: up.purchased_at)
     
     return latest_plan
 
@@ -20,7 +43,7 @@ def check_gym( session: Session, gym_id: int ):
     if not gym:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Gym not found or inactive"
+            detail="Gimnasio no encontrado o inactivo"
         )
     
 def check_trainer_gym( gym_id: int, user: User, message: str ):
@@ -36,7 +59,7 @@ def check_user_by_document_id_and_gym( session: Session, document_id: str, gym_i
     if user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Document ID already registered in this gym"
+            detail="El número de documento ya está registrado en este gimnasio"
         )
 
 def check_user_by_document_id( session: Session, document_id: str ):
@@ -45,7 +68,7 @@ def check_user_by_document_id( session: Session, document_id: str ):
     if user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Document ID already registered"
+            detail="El número de documento ya está registrado"
         )
 
 def check_user_by_email_and_gym( session: Session, email: str, gym_id: int ):
@@ -54,7 +77,7 @@ def check_user_by_email_and_gym( session: Session, email: str, gym_id: int ):
     if user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already registered in this gym"
+            detail="El correo electrónico ya está registrado en este gimnasio"
         )
 
 def check_user_by_email( session: Session, email: str ):
@@ -63,7 +86,7 @@ def check_user_by_email( session: Session, email: str ):
     if user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already registered"
+            detail="El correo electrónico ya está registrado"
         )
 
 def check_user_by_id_and_gym( session: Session, user_id: int, gym_id: int ):
@@ -72,7 +95,7 @@ def check_user_by_id_and_gym( session: Session, user_id: int, gym_id: int ):
     if not user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User not registered in this gym"
+            detail="Usuario no registrado en este gimnasio"
         )
 
     return user
@@ -83,7 +106,7 @@ def check_user_by_id( session: Session, user_id: int ):
     if not user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User not registered"
+            detail="Usuario no registrado"
         )
 
     return user
@@ -94,7 +117,7 @@ def get_user_by_document_id( session: Session, document_id: str, gym_id: int ):
     if not user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Document ID not registered on this gym"
+            detail="Número de documento no registrado en este gimnasio"
         )
 
     return user
@@ -105,7 +128,7 @@ def get_user_by_id( session: Session, user_id: int, gym_id: int ):
     if not user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User not registered in this gym"
+            detail="Usuario no registrado en este gimnasio"
         )
 
     return user
@@ -116,7 +139,7 @@ def get_user_by_email( session: Session, email: str, gym_id: int ):
     if not user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email not registered in this gym"
+            detail="Correo electrónico no registrado en este gimnasio"
         )
 
     return user

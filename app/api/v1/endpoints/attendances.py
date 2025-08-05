@@ -6,9 +6,11 @@ from app.core.database import get_session
 from app.core.deps import require_admin, require_trainer_or_admin
 from app.models.user import User, UserRole
 from app.models.attendance import Attendance, AttendanceCreate, AttendanceUpdate
+from app.models.user_plan import UserPlan
+from app.models.plan import PlanRole
 from datetime import datetime, date, timezone
 from app.models.read_models import AttendanceRead
-from app.core.methods import check_gym, check_user_by_id
+from app.core.methods import check_gym, check_user_by_id, get_last_plan
 
 router = APIRouter()
 
@@ -42,31 +44,6 @@ def read_attendance(
         query = query.where(Attendance.gym_id == current_user.gym_id)
     
     attendance_records = session.exec(query.offset(skip).limit(limit)).all()
-    return attendance_records
-
-@router.get("/user/{user_id}", response_model=List[AttendanceRead])
-def read_user_attendance(
-    user_id: int,
-    start_date: Optional[date] = Query(None, description="Start date for attendance records"),
-    end_date: Optional[date] = Query(None, description="End date for attendance records"),
-    session: Session = Depends(get_session),
-    current_user: User = Depends(require_trainer_or_admin)
-):
-    """Get attendance records for a specific user - Admin and Trainer access only"""
-    check_gym( session, current_user.gym_id )
-
-    check_user_by_id( session, user_id )
-    
-    query = select( Attendance ).where( Attendance.user_id == user_id, Attendance.gym_id == current_user.gym_id )
-    
-    # Filter by date range if specified
-    if start_date:
-        query = query.where(Attendance.check_in_time.date() >= start_date)
-    if end_date:
-        query = query.where(Attendance.check_in_time.date() <= end_date)
-    
-    attendance_records = session.exec(query.order_by(Attendance.check_in_time.desc())).all()
-
     return attendance_records
 
 @router.get("/user/{user_id}/summary")
@@ -127,26 +104,27 @@ def get_daily_attendance(
     
     return attendance_records
 
-@router.post("/", response_model=AttendanceRead)
+@router.post("/{document_id}", response_model=AttendanceRead)
 def create_attendance(
+    document_id: str,
     attendance: AttendanceCreate,
     session: Session = Depends(get_session),
     current_user: User = Depends(require_trainer_or_admin)
 ):
     """Create a new attendance record - Admin and Trainer access only"""
     # Get the user
-    user = session.exec(select(User).where(User.id == attendance.user_id)).first()
+    user = session.exec(select(User).options(joinedload(User.user_plans).selectinload(UserPlan.plan)).where(User.document_id == document_id ) ).first()
 
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
+            detail="Usuario no encontrado"
         )
     
     # Check if attendance record already exists for this user on this date
     existing_attendance = session.exec(
         select(Attendance).where(
-            Attendance.user_id == attendance.user_id,
+            Attendance.user_id == user.id,
             Attendance.check_in_time.date() == datetime.now(timezone.utc).date()
         )
     ).first()
@@ -154,14 +132,41 @@ def create_attendance(
     if existing_attendance:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Attendance record already exists for this user on this date"
+            detail="El usuario ya tiene una asistencia registrada para hoy"
         )
+    
+    active_plan = get_last_plan(user)
+    
+    if not active_plan:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="El usuario no tiene un plan activo válido"
+        )
+    
+    if active_plan.plan.role == PlanRole.TAQUILLERO:
+        if active_plan.plan.days == 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="El plan taquillero del usuario se quedó sin días"
+            )
+        
+        active_plan.plan.days -= 1
+
+    else:
+        current_time = datetime.now(timezone.utc)
+        
+        if active_plan.expires_at <= current_time:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="El plan del usuario ha expirado"
+            )
     
     # Create attendance record with all required fields
     attendance_data = attendance.model_dump()
     attendance_data.update({
         "recorded_by_id": current_user.id,
-        "gym_id": current_user.gym_id
+        "gym_id": current_user.gym_id,
+        "user_id": user.id
     })
     
     db_attendance = Attendance.model_validate(attendance_data)
@@ -184,14 +189,14 @@ def update_attendance(
     if not db_attendance:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Attendance record not found"
+            detail="Registro de asistencia no encontrado"
         )
     
     # If trainer, only allow updating attendance for users in their gym
     if current_user.role == UserRole.TRAINER and db_attendance.gym_id != current_user.gym_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You can only update attendance records for users in your own gym"
+            detail="Solo puedes actualizar registros de asistencia de usuarios en tu propio gimnasio"
         )
     
     # Update attendance record
@@ -218,9 +223,9 @@ def delete_attendance(
     if not db_attendance:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Attendance record not found"
+            detail="Registro de asistencia no encontrado"
         )
     
     session.delete(db_attendance)
     session.commit()
-    return {"message": "Attendance record deleted successfully"} 
+    return {"message": "Registro de asistencia eliminado exitosamente"} 

@@ -9,22 +9,25 @@ import sys
 import os
 from datetime import datetime
 
-# Test modules to run
-TEST_MODULES = [
+# Test modules to run (legacy tests)
+LEGACY_TEST_MODULES = [
     "test_users.py",
     "test_gyms.py", 
     "test_plans.py",
     "test_measurements.py",
     "test_sales.py"
-    # Add more test modules as they are created:
-    # "test_products.py",
-    # "test_attendance.py",
-    # "test_user_plans.py",
-    # "test_auth.py"
+]
+
+# Pytest test modules (run with pytest command)
+PYTEST_TEST_MODULES = [
+    "test_auth_pytest.py",
+    "test_attendances_pytest.py",
+    "test_products_pytest.py",
+    "test_user_plans_pytest.py"
 ]
 
 def run_test_module(module_name, description):
-    """Run a test module and return success status"""
+    """Run a legacy test module and return success status"""
     print(f"\n🔄 Running {description}...")
     print("=" * 60)
     
@@ -38,6 +41,45 @@ def run_test_module(module_name, description):
                               text=True, 
                               check=False,
                               cwd=script_dir)  # Run from the tests directory
+        
+        if result.returncode == 0:
+            print(f"PASS {description} completed successfully")
+            if result.stdout:
+                print(result.stdout)
+            return True
+        else:
+            print(f"FAIL {description} failed")
+            if result.stdout:
+                print("STDOUT:", result.stdout)
+            if result.stderr:
+                print("STDERR:", result.stderr)
+            return False
+            
+    except Exception as e:
+        print(f"FAIL {description} failed with exception: {str(e)}")
+        return False
+
+def run_pytest_module(module_name, description):
+    """Run a pytest test module and return success status"""
+    print(f"\n🔄 Running {description} (pytest)...")
+    print("=" * 60)
+    
+    try:
+        # Get the directory where this script is located
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        parent_dir = os.path.dirname(script_dir)  # Go up to the main project directory
+        
+        result = subprocess.run([
+            sys.executable, "-m", "pytest", 
+            os.path.join(script_dir, module_name),
+            "-v",  # Verbose output
+            "--tb=short",  # Short traceback format
+            "--color=no"  # No color for better output capture
+        ], 
+        capture_output=True, 
+        text=True,
+        check=False,
+        cwd=parent_dir)  # Run from the main project directory
         
         if result.returncode == 0:
             print(f"PASS {description} completed successfully")
@@ -85,14 +127,14 @@ def main():
     if not check_server_running():
         return False
     
-    print(f"\n📋 Running {len(TEST_MODULES)} test modules...")
+    print(f"\n📋 Running {len(LEGACY_TEST_MODULES)} legacy test modules...")
     
-    # Run all test modules
+    # Run legacy test modules
     results = {}
     total_passed = 0
-    total_modules = len(TEST_MODULES)
+    total_modules = len(LEGACY_TEST_MODULES)
     
-    for module in TEST_MODULES:
+    for module in LEGACY_TEST_MODULES:
         # Get the directory where this script is located
         script_dir = os.path.dirname(os.path.abspath(__file__))
         module_path = os.path.join(script_dir, module)
@@ -106,6 +148,26 @@ def main():
         else:
             print(f"⚠️  Test module {module} not found at {module_path}, skipping...")
             results[module] = False
+    
+    print(f"\n📋 Running {len(PYTEST_TEST_MODULES)} pytest test modules...")
+    
+    # Run pytest test modules
+    for module in PYTEST_TEST_MODULES:
+        # Get the directory where this script is located
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        module_path = os.path.join(script_dir, module)
+        
+        if os.path.exists(module_path):
+            description = module.replace("test_", "").replace("_pytest.py", "").title()
+            success = run_pytest_module(module, description)
+            results[module] = success
+            if success:
+                total_passed += 1
+            total_modules += 1
+        else:
+            print(f"⚠️  Test module {module} not found at {module_path}, skipping...")
+            results[module] = False
+            total_modules += 1
     
     # Print summary
     print("\n" + "=" * 60)

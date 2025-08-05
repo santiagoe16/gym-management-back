@@ -19,26 +19,26 @@ def login(login_data: LoginRequest, session: Session = Depends(get_session)):
     if user.role == UserRole.USER:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Users cannot login to the system"
+            detail="Los usuarios no pueden iniciar sesión en el sistema"
         )
     
     if not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Inactive user"
+            detail="Usuario inactivo"
         )
     
     if not verify_password(login_data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
+            detail="Correo electrónico o contraseña incorrectos",
             headers={"WWW-Authenticate": "Bearer"},
         )
     
     if user.role == UserRole.TRAINER and user.gym_id != login_data.gym_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="User does not belong to this gym"
+            detail="El usuario no pertenece a este gimnasio"
         )
     
     # Create access token without expiration - user stays logged in until logout

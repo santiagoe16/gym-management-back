@@ -3,7 +3,10 @@ import asyncio
 from fastapi.testclient import TestClient
 from sqlmodel import Session, SQLModel, create_engine
 from sqlalchemy.pool import StaticPool
-from app.main import app
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from main import app
 from app.core.database import get_session
 from app.models.user import User, UserRole
 from app.models.gym import Gym

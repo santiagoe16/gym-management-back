@@ -167,7 +167,7 @@ def search_user_by_document_id(
     user = session.exec(query).first()
 
     if user is None:
-        raise HTTPException(status_code=404, detail="User not found with this document ID")
+        raise HTTPException(status_code=404, detail="Usuario no encontrado con este número de documento")
     
     user_data = UserRead.model_validate(user)
     last_plan = get_last_plan(user)
@@ -202,7 +202,7 @@ def search_users_by_phone(
     users = session.exec(query).all()
 
     if not users:
-        raise HTTPException(status_code=404, detail="No users found with this phone number")
+        raise HTTPException(status_code=404, detail="No se encontraron usuarios con este número de teléfono")
     
     user_list = []
 
@@ -234,13 +234,13 @@ def read_user(
     user = session.exec(query).first()
 
     if user is None:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
     
     if current_user.role == UserRole.TRAINER:
         if user.role != UserRole.USER:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Trainers can only view regular users"
+                detail="Los entrenadores solo pueden ver usuarios regulares"
             )
     
     user_data = UserRead.model_validate(user)
@@ -316,20 +316,20 @@ def update_user(
     db_user = session.exec(select(User).where(User.id == user_id)).first()
 
     if db_user is None:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
     
     # If trainer, only allow updating regular users in their gym
     if current_user.role == UserRole.TRAINER:
         if db_user.role != UserRole.USER:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Trainers can only update regular users"
+                detail="Los entrenadores solo pueden actualizar usuarios regulares"
             )
         
         if user_update.role is not None:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Trainers cannot change user roles"
+                detail="Los entrenadores no pueden cambiar roles de usuario"
             )
     
     if user_update.email and user_update.email != db_user.email:
@@ -338,7 +338,7 @@ def update_user(
         if existing_user:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Email already registered"
+                detail="El correo electrónico ya está registrado"
             )
     
     if user_update.document_id and user_update.document_id != db_user.document_id:
@@ -347,7 +347,7 @@ def update_user(
         if existing_doc:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Document ID already registered"
+                detail="El número de documento ya está registrado"
             )
         
     user_data = user_update.model_dump(exclude_unset=True)
@@ -372,7 +372,7 @@ def update_user(
         if not plan:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Plan not found, inactive, or not available in this gym"
+                detail="Plan no encontrado, inactivo o no disponible en este gimnasio"
             )
         
         # Create user plan
@@ -408,10 +408,9 @@ def delete_user(
     """Delete a user - Admin access only"""
     db_user = session.exec(select(User).where(User.id == user_id)).first()
     if db_user is None:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
     
     # Check if user has any related data that would prevent deletion
-    from app.models.user_plan import UserPlan
     
     # Check for related data
     user_plans = session.exec(select(UserPlan).where(UserPlan.user_id == user_id)).all()
@@ -432,4 +431,4 @@ def delete_user(
     # Now delete the user
     session.delete(db_user)
     session.commit()
-    return {"message": "User deleted successfully"}
+    return {"message": "Usuario eliminado exitosamente"}
