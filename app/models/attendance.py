@@ -22,7 +22,6 @@ class Attendance(AttendanceBase, table=True):
     gym: "Gym" = Relationship(back_populates="attendance", sa_relationship_kwargs={"foreign_keys": "[Attendance.gym_id]"})
 
 class AttendanceCreate(SQLModel):
-    user_id: int
     notes: Optional[str] = None
 
 class AttendanceUpdate(SQLModel):

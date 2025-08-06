@@ -133,7 +133,18 @@ def get_user_by_id( session: Session, user_id: int, gym_id: int ):
 
     return user
 
-def get_user_by_email( session: Session, email: str, gym_id: int ):
+def get_user_by_email( session: Session, email: str ):
+    user = session.exec(select(User).where(User.email == email)).first()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Este usuario no existe"
+        )
+
+    return user
+
+def get_user_by_email_and_gym( session: Session, email: str, gym_id: int ):
     user = session.exec(select(User).where(User.email == email, User.gym_id == gym_id)).first()
 
     if not user:

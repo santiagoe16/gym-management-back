@@ -2,6 +2,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlmodel import Session, select
 from sqlalchemy.orm import joinedload
+from sqlalchemy import func
 from app.core.database import get_session
 from app.core.deps import require_admin, require_trainer_or_admin
 from app.models.user import User, UserRole
@@ -33,7 +34,7 @@ def read_attendance(
     
     # Filter by date if specified
     if attendance_date:
-        query = query.where(Attendance.check_in_time.date() == attendance_date)
+        query = query.where(func.date(Attendance.check_in_time) == attendance_date)
     
     # Filter by gym if specified
     if gym_id:
@@ -59,13 +60,13 @@ def get_user_attendance_summary(
     
     user = check_user_by_id( session, user_id )
 
-    query = select( Attendance ).where( Attendance.user_id == user_id, Attendance.gym_id == current_user.gym_id )
+    query = select( Attendance ).options( joinedload( Attendance.user ), joinedload( Attendance.gym ), joinedload( Attendance.recorded_by ) ).where( Attendance.user_id == user_id, Attendance.gym_id == current_user.gym_id )
     
     # Filter by date range if specified
     if start_date:
-        query = query.where(Attendance.check_in_time.date() >= start_date)
+        query = query.where(func.date(Attendance.check_in_time) >= start_date)
     if end_date:
-        query = query.where(Attendance.check_in_time.date() <= end_date)
+        query = query.where(func.date(Attendance.check_in_time) <= end_date)
     
     attendance_records = session.exec(query).all()
     
@@ -89,15 +90,15 @@ def get_user_attendance_summary(
         }
     }
 
-@router.get("/daily/{attendance_date}")
+@router.get("/daily/{attendance_date}", response_model=List[AttendanceRead])
 def get_daily_attendance(
     attendance_date: date,
     session: Session = Depends(get_session),
     current_user: User = Depends(require_trainer_or_admin)
 ):
     """Get attendance records for a specific date - Admin and Trainer access only"""
-    query = select( Attendance ).options( joinedload( Attendance.user ), joinedload( Attendance.gym ) ).where( 
-        Attendance.check_in_time.date() == attendance_date, Attendance.gym_id == current_user.gym_id 
+    query = select( Attendance ).options( joinedload( Attendance.user ), joinedload( Attendance.gym ), joinedload( Attendance.recorded_by ) ).where( 
+        func.date(Attendance.check_in_time) == attendance_date, Attendance.gym_id == current_user.gym_id 
     )
     
     attendance_records = session.exec(query).all()
@@ -122,10 +123,11 @@ def create_attendance(
         )
     
     # Check if attendance record already exists for this user on this date
+    today = datetime.now(timezone.utc).date()
     existing_attendance = session.exec(
         select(Attendance).where(
             Attendance.user_id == user.id,
-            Attendance.check_in_time.date() == datetime.now(timezone.utc).date()
+            func.date(Attendance.check_in_time) == today
         )
     ).first()
     
@@ -155,7 +157,12 @@ def create_attendance(
     else:
         current_time = datetime.now(timezone.utc)
         
-        if active_plan.expires_at <= current_time:
+        # Ensure expires_at is timezone-aware for comparison
+        expires_at = active_plan.expires_at
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        
+        if expires_at <= current_time:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="El plan del usuario ha expirado"

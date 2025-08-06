@@ -34,8 +34,8 @@ def create_admin_or_trainer(
         )
     
     check_gym( session, user.gym_id )
-    check_user_by_email_and_gym( session, user.email, user.gym_id )
-    check_user_by_document_id_and_gym( session, user.document_id, user.gym_id )
+    check_user_by_email( session, user.email )
+    check_user_by_document_id( session, user.document_id )
     
     hashed_password = get_password_hash(user.password)
     db_user = User.model_validate(user)

@@ -36,7 +36,7 @@ class MeasurementTester:
         """Login as admin"""
         login_data = {
             "email": "admin@test.com",
-            "password": "admin123",
+            "password": "adminpass123",
             "gym_id": 16
         }
         response = self.session.post(f"{BASE_URL}/auth/login", json=login_data)
@@ -49,7 +49,7 @@ class MeasurementTester:
         """Login as trainer"""
         login_data = {
             "email": "trainer@test.com", 
-            "password": "trainer123",
+            "password": "trainerpass123",
             "gym_id": 16
         }
         response = self.session.post(f"{BASE_URL}/auth/login", json=login_data)
@@ -659,7 +659,7 @@ class MeasurementTester:
         # Login first
         if not self.test_login():
             print("Login failed. Cannot proceed with tests.")
-            return
+            return False
         
         # Run all tests
         tests = [
@@ -697,6 +697,8 @@ class MeasurementTester:
         
         # Cleanup
         self.cleanup_test_data()
+        
+        return passed == total
 
 if __name__ == "__main__":
     tester = MeasurementTester()
