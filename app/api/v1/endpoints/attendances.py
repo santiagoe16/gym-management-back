@@ -93,17 +93,35 @@ def get_user_attendance_summary(
 @router.get("/daily/{attendance_date}", response_model=List[AttendanceRead])
 def get_daily_attendance(
     attendance_date: date,
+    trainer_id: Optional[int] = Query(None, description="Filter by trainer ID"),
+    gym_id: Optional[int] = Query(None, description="Filter by gym ID"),
     session: Session = Depends(get_session),
     current_user: User = Depends(require_trainer_or_admin)
 ):
     """Get attendance records for a specific date - Admin and Trainer access only"""
     query = select( Attendance ).options( joinedload( Attendance.user ), joinedload( Attendance.gym ), joinedload( Attendance.recorded_by ) ).where( 
-        func.date(Attendance.check_in_time) == attendance_date, Attendance.gym_id == current_user.gym_id 
+        func.date( Attendance.check_in_time ) == attendance_date
     )
     
-    attendance_records = session.exec(query).all()
+    if trainer_id:
+        query = query.where( Attendance.recorded_by_id == trainer_id )
     
-    return attendance_records
+    if gym_id:
+        query = query.where( Attendance.gym_id == gym_id )
+    
+    if current_user.role == UserRole.TRAINER:
+        query = query.where( Attendance.gym_id == current_user.gym_id )
+    
+    attendance_records = session.exec( query ).all()
+    
+    result = []
+
+    for record in attendance_records:
+        attendance = AttendanceRead.model_validate( record )
+        attendance.user.active_plan = get_last_plan( record.user )
+        result.append( attendance )
+
+    return result
 
 @router.post("/{document_id}", response_model=AttendanceRead)
 def create_attendance(
@@ -114,7 +132,7 @@ def create_attendance(
 ):
     """Create a new attendance record - Admin and Trainer access only"""
     # Get the user
-    user = session.exec(select(User).options(joinedload(User.user_plans).selectinload(UserPlan.plan)).where(User.document_id == document_id ) ).first()
+    user = session.exec( select( User ).options( joinedload( User.user_plans ).selectinload( UserPlan.plan ) ).where( User.document_id == document_id ) ).first()
 
     if not user:
         raise HTTPException(
@@ -132,10 +150,12 @@ def create_attendance(
     ).first()
     
     if existing_attendance:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="El usuario ya tiene una asistencia registrada para hoy"
-        )
+        result = AttendanceRead.model_validate( existing_attendance )
+
+        result.user.active_plan = get_last_plan( user )
+
+        return result
+
     
     active_plan = get_last_plan(user)
     
@@ -155,19 +175,20 @@ def create_attendance(
         active_plan.plan.days -= 1
 
     else:
-        current_time = datetime.now(timezone.utc)
+        current_time = datetime.now( timezone.utc )
         
         # Ensure expires_at is timezone-aware for comparison
         expires_at = active_plan.expires_at
+
         if expires_at.tzinfo is None:
-            expires_at = expires_at.replace(tzinfo=timezone.utc)
+            expires_at = expires_at.replace( tzinfo = timezone.utc )
         
-        if expires_at <= current_time:
+        if expires_at.date() <= current_time.date():
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="El plan del usuario ha expirado"
             )
-    
+       
     # Create attendance record with all required fields
     attendance_data = attendance.model_dump()
     attendance_data.update({
@@ -181,7 +202,12 @@ def create_attendance(
     session.add(db_attendance)
     session.commit()
     session.refresh(db_attendance)
-    return db_attendance
+
+    result = AttendanceRead.model_validate( db_attendance )
+
+    result.user.active_plan = active_plan
+
+    return result
 
 @router.put("/{attendance_id}", response_model=AttendanceRead)
 def update_attendance(

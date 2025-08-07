@@ -97,7 +97,7 @@ def create_user_with_plan(
         created_by_id=current_user.id
     )
     
-    session.add(user_plan)
+    session.add( user_plan )
     session.commit()
     
     user_read = UserRead.model_validate(db_user)
@@ -105,7 +105,6 @@ def create_user_with_plan(
     user_read.active_plan = UserPlanRead.model_validate(last_plan) if last_plan else None
 
     return user_read
-
 
 @router.get("/", response_model=List[UserRead])
 def read_users(

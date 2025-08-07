@@ -2,13 +2,13 @@ from time import timezone
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import selectinload
-from sqlmodel import Session, select
+from sqlmodel import Session, select, func
 from app.core.database import get_session
 from app.core.deps import require_admin, require_trainer_or_admin
 from app.models.user import User, UserRole
 from app.models.plan import Plan
 from app.models.user_plan import UserPlan, UserPlanUpdate
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date
 from app.models.read_models import UserPlanRead
 
 router = APIRouter()
@@ -17,27 +17,58 @@ router = APIRouter()
 def read_user_plans(
     skip: int = 0,
     limit: int = 100,
-    user_id: Optional[int] = Query(None, description="Filter by user ID"),
+    trainer_id: Optional[int] = Query(None, description="Filter by trainer ID"),
+    plan_id: Optional[int] = Query(None, description="Filter by product ID"),
     gym_id: Optional[int] = Query(None, description="Filter by gym ID"),
+    start_date: Optional[date] = Query(None, description="Filter sales from this date"),
+    end_date: Optional[date] = Query(None, description="Filter sales until this date"),
     session: Session = Depends(get_session),
     current_user: User = Depends(require_trainer_or_admin)
 ):
     """Get all user plans - Admin and Trainer access only"""
-    query = select(UserPlan).options(selectinload(UserPlan.user), selectinload(UserPlan.plan), selectinload(UserPlan.created_by))
+    query = select( UserPlan ).options( selectinload( UserPlan.user ), selectinload( UserPlan.plan ), selectinload( UserPlan.created_by ) )
+
+    if trainer_id:
+        query = query.where( UserPlan.created_by_id == trainer_id )
     
-    # Filter by user if specified
-    if user_id:
-        query = query.where(UserPlan.user_id == user_id)
+    if plan_id:
+        query = query.where( UserPlan.plan_id == plan_id )
     
-    # Filter by gym if specified
     if gym_id:
-        query = query.join(User, UserPlan.user_id == User.id).where(User.gym_id == gym_id)
+        query = query.where( Plan.gym_id == gym_id )
     
-    # If trainer, only show user plans from their gym
+    if start_date:
+        query = query.where( func.date( UserPlan.purchased_at ) >= start_date )
+    
+    if end_date:
+        query = query.where( func.date( UserPlan.purchased_at ) <= end_date )
+    
+    user_plans = session.exec( query.offset( skip ).limit( limit ) ).all()
+
+    return user_plans
+
+@router.get("/daily", response_model=List[UserPlanRead])
+def read_daily_user_plans(
+    purchased_at: date = Query(..., description="Date to get sales for"),
+    trainer_id: Optional[int] = Query(None, description="Filter by trainer ID"),
+    gym_id: Optional[int] = Query(None, description="Filter by trainer ID"),
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_trainer_or_admin)
+):
+    """Get user plans for a specific date - Admin can see all, Trainer sees only their own"""
+    query = select( UserPlan ).options( selectinload( UserPlan.user ), selectinload( UserPlan.plan ), selectinload( UserPlan.created_by ) ).where( func.date( UserPlan.purchased_at ) == purchased_at )
+    
+    if trainer_id:
+        query = query.where( UserPlan.created_by_id == trainer_id )
+    
+    if gym_id:
+        query = query.where( UserPlan.plan.gym_id == gym_id )
+    
     if current_user.role == UserRole.TRAINER:
-        query = query.join(User, UserPlan.user_id == User.id).where(User.gym_id == current_user.gym_id)
+        query = query.where( UserPlan.created_by_id == current_user.id )
     
-    user_plans = session.exec(query.offset(skip).limit(limit)).all()
+    user_plans = session.exec( query ).all()
+    
     return user_plans
 
 @router.get("/user/{user_id}", response_model=List[UserPlanRead])

@@ -111,6 +111,7 @@ def read_sales(
 def read_daily_sales(
     sale_date: date = Query(..., description="Date to get sales for"),
     trainer_id: Optional[int] = Query(None, description="Filter by trainer ID"),
+    gym_id: Optional[int] = Query(None, description="Filter by gym ID"),
     session: Session = Depends(get_session),
     current_user: User = Depends(require_trainer_or_admin)
 ):
@@ -118,13 +119,15 @@ def read_daily_sales(
     query = select(Sale).options(selectinload(Sale.product), selectinload(Sale.sold_by), selectinload(Sale.gym)).where(func.date(Sale.sale_date) == sale_date)
     
     if trainer_id:
-        query = query.where(Sale.sold_by_id == trainer_id)
+        query = query.where( Sale.sold_by_id == trainer_id )
     
-    # If trainer, only show their own sales. Admin can see all sales.
+    if gym_id:
+        query = query.where( Sale.gym_id == gym_id )
+    
     if current_user.role == UserRole.TRAINER:
-        query = query.where(Sale.sold_by_id == current_user.id)
+        query = query.where( Sale.sold_by_id == current_user.id )
     
-    sales = session.exec(query).all()
+    sales = session.exec( query ).all()
     
     return sales
 

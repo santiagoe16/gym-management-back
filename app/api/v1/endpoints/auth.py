@@ -5,7 +5,7 @@ from app.core.security import verify_password, create_access_token
 from app.models.auth import Token, LoginRequest
 from app.models.user import User, UserRole
 from app.core.deps import get_current_active_user
-from app.core.methods import get_user_by_email, get_user_by_email_and_gym
+from app.core.methods import get_user_by_email
 
 router = APIRouter()
 
