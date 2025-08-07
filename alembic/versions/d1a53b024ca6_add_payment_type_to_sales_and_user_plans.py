@@ -1,7 +1,7 @@
 """add_payment_type_to_sales_and_user_plans
 
 Revision ID: d1a53b024ca6
-Revises: f73bfd2551f0
+Revises: 1c8289acc6a0
 Create Date: 2025-08-07 12:37:57.198180
 
 """
@@ -12,7 +12,7 @@ from sqlalchemy.dialects import mysql
 
 # revision identifiers, used by Alembic.
 revision = 'd1a53b024ca6'
-down_revision = 'f73bfd2551f0'
+down_revision = '1c8289acc6a0'
 branch_labels = None
 depends_on = None
 
@@ -27,16 +27,20 @@ def upgrade() -> None:
     # Add payment_type to sales table
     sales_columns = [col['name'] for col in inspector.get_columns('sales')]
     if 'payment_type' not in sales_columns:
-        op.add_column('sales', sa.Column('payment_type', sa.Enum('cash', 'transfer', name='paymenttype'), nullable=False, default='cash'))
+        op.add_column('sales', sa.Column('payment_type', sa.Enum('CASH', 'TRANSFER', name='paymenttype'), nullable=False, default='CASH'))
         # Update existing records to have default payment type
-        op.execute("UPDATE sales SET payment_type = 'cash' WHERE payment_type IS NULL")
+        op.execute("UPDATE sales SET payment_type = 'CASH' WHERE payment_type IS NULL")
     
     # Add payment_type to user_plans table
     user_plans_columns = [col['name'] for col in inspector.get_columns('user_plans')]
     if 'payment_type' not in user_plans_columns:
-        op.add_column('user_plans', sa.Column('payment_type', sa.Enum('cash', 'transfer', name='paymenttype'), nullable=False, default='cash'))
+        op.add_column('user_plans', sa.Column('payment_type', sa.Enum('CASH', 'TRANSFER', name='paymenttype'), nullable=False, default='CASH'))
         # Update existing records to have default payment type
-        op.execute("UPDATE user_plans SET payment_type = 'cash' WHERE payment_type IS NULL")
+        op.execute("UPDATE user_plans SET payment_type = 'CASH' WHERE payment_type IS NULL")
+    
+    # First, update existing data to use uppercase values
+    op.execute("UPDATE user_plans SET payment_type = 'CASH' WHERE payment_type = 'cash'")
+    op.execute("UPDATE user_plans SET payment_type = 'TRANSFER' WHERE payment_type = 'transfer'")
     
     # ### end Alembic commands ###
 

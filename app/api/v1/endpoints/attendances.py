@@ -118,7 +118,10 @@ def get_daily_attendance(
 
     for record in attendance_records:
         attendance = AttendanceRead.model_validate( record )
-        attendance.user.active_plan = get_last_plan( record.user )
+
+        user = session.exec( select( User ).options( joinedload( User.user_plans ).selectinload( UserPlan.plan ) ).where( User.id == record.user_id ) ).first()
+
+        attendance.user.active_plan = get_last_plan( user )
         result.append( attendance )
 
     return result

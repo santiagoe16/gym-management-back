@@ -62,7 +62,7 @@ def read_daily_user_plans(
         query = query.where( UserPlan.created_by_id == trainer_id )
     
     if gym_id:
-        query = query.where( UserPlan.plan.gym_id == gym_id )
+        query = query.where( Plan.gym_id == gym_id )
     
     if current_user.role == UserRole.TRAINER:
         query = query.where( UserPlan.created_by_id == current_user.id )
