@@ -3,6 +3,8 @@ from typing import Optional
 from datetime import datetime, timezone
 from decimal import Decimal
 
+from app.models.auth import PaymentType
+
 class UserPlanBase(SQLModel):
     user_id: int = Field(foreign_key="users.id")
     plan_id: int = Field(foreign_key="plans.id")
@@ -10,6 +12,7 @@ class UserPlanBase(SQLModel):
     purchased_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     expires_at: datetime
     created_by_id: int = Field(foreign_key="users.id")  # Admin or Trainer who created this
+    payment_type: PaymentType = Field(default=PaymentType.CASH)
 
 class UserPlan(UserPlanBase, table=True):
     __tablename__ = "user_plans"

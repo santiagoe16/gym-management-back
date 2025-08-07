@@ -1,6 +1,11 @@
+from enum import Enum
 from sqlmodel import SQLModel
 from typing import Optional
 from app.models.user import UserBase
+
+class PaymentType(str, Enum):
+    CASH = "cash"
+    TRANSFER = "transfer"
 
 class Token(SQLModel):
     access_token: str
