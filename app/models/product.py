@@ -1,8 +1,8 @@
 from sqlmodel import SQLModel, Field, Relationship
 from typing import Optional, List
-from datetime import datetime, timezone
+from datetime import datetime
 from decimal import Decimal
-
+import pytz
 class ProductBase(SQLModel):
     name: str = Field(unique=True, index=True)
     price: Decimal = Field(description="Product price")
@@ -14,8 +14,8 @@ class Product(ProductBase, table=True):
     __tablename__ = "products"
     
     id: Optional[int] = Field(default=None, primary_key=True)
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(pytz.timezone('America/Bogota')))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(pytz.timezone('America/Bogota')))
     
     # Relationships
     gym: "Gym" = Relationship(back_populates="products")

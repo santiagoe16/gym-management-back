@@ -1,4 +1,4 @@
-from time import timezone
+
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import selectinload
@@ -10,6 +10,7 @@ from app.models.plan import Plan
 from app.models.user_plan import UserPlan, UserPlanUpdate
 from datetime import datetime, timezone, date
 from app.models.read_models import UserPlanRead
+import pytz
 
 router = APIRouter()
 
@@ -170,7 +171,7 @@ def update_user_plan(
         current_plan = session.exec(select(Plan).where(Plan.id == db_user_plan.plan_id)).first()
         
         # Check if plan is expired
-        is_expired = db_user_plan.expires_at < datetime.now(timezone.utc)
+        is_expired = db_user_plan.expires_at < datetime.now(pytz.timezone('America/Bogota'))
         
         # Check if it's an upgrade (new plan has longer duration or higher price)
         is_upgrade = False
@@ -196,7 +197,7 @@ def update_user_plan(
     for field, value in update_data.items():
         setattr(db_user_plan, field, value)
     
-    db_user_plan.updated_at = datetime.now(timezone.utc)
+    db_user_plan.updated_at = datetime.now(pytz.timezone('America/Bogota'))
     session.add(db_user_plan)
     session.commit()
     session.refresh(db_user_plan)

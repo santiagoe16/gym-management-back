@@ -1,8 +1,8 @@
 from sqlmodel import SQLModel, Field, Relationship
 from typing import Optional
-from datetime import datetime, timezone
+from datetime import datetime
 from decimal import Decimal
-
+import pytz
 from app.models.auth import PaymentType
 
 class SaleBase(SQLModel):
@@ -12,15 +12,15 @@ class SaleBase(SQLModel):
     total_amount: Decimal = Field(description="Total amount for this sale")
     sold_by_id: int = Field(foreign_key="users.id")  # Admin or trainer who made the sale
     gym_id: int = Field(foreign_key="gyms.id", description="Gym where the sale was made")
-    sale_date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    sale_date: datetime = Field(default_factory=lambda: datetime.now(pytz.timezone('America/Bogota')))
     payment_type: PaymentType = Field(default=PaymentType.CASH)
 
 class Sale(SaleBase, table=True):
     __tablename__ = "sales"
     
     id: Optional[int] = Field(default=None, primary_key=True)
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(pytz.timezone('America/Bogota')))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(pytz.timezone('America/Bogota')))
     
     # Relationships
     product: "Product" = Relationship(back_populates="sales")

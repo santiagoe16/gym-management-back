@@ -1,8 +1,9 @@
 from enum import Enum
 from sqlmodel import SQLModel, Field, Relationship
 from typing import Optional, List
-from datetime import datetime, timezone
+from datetime import datetime
 from decimal import Decimal
+import pytz
 
 class PlanRole(str, Enum):
     REGULAR = "regular"
@@ -20,8 +21,8 @@ class Plan(PlanBase, table=True):
     __tablename__ = "plans"
     
     id: Optional[int] = Field(default=None, primary_key=True)
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(pytz.timezone('America/Bogota')))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(pytz.timezone('America/Bogota')))
 
     days: Optional[int] = None
     

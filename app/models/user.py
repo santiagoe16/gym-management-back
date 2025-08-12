@@ -1,7 +1,8 @@
 from enum import Enum
 from sqlmodel import SQLModel, Field, Relationship
 from typing import Optional, List
-from datetime import datetime, timezone, time
+from datetime import datetime
+import pytz
 
 class UserRole(str, Enum):
     ADMIN = "admin"
@@ -24,8 +25,8 @@ class User(UserBase, table=True):
     hashed_password: Optional[str] = None  # Only for admin and trainer users
     schedule_start: Optional[str] = None  # Only for trainer users
     schedule_end: Optional[str] = None  # Only for trainer users
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(pytz.timezone('America/Bogota')))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(pytz.timezone('America/Bogota')))
     
     # Relationships
     gym: "Gym" = Relationship(back_populates="users")

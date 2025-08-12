@@ -9,9 +9,10 @@ from app.models.user import User, UserRole
 from app.models.attendance import Attendance, AttendanceCreate, AttendanceUpdate
 from app.models.user_plan import UserPlan
 from app.models.plan import PlanRole
-from datetime import datetime, date, timezone
+from datetime import datetime, date
 from app.models.read_models import AttendanceRead
 from app.core.methods import check_gym, check_user_by_id, get_last_plan
+import pytz
 
 router = APIRouter()
 
@@ -143,8 +144,8 @@ def create_attendance(
             detail="Usuario no encontrado"
         )
     
-    # Check if attendance record already exists for this user on this date
-    today = datetime.now(timezone.utc).date()
+    today = datetime.now(pytz.timezone('America/Bogota')).date()
+    
     existing_attendance = session.exec(
         select(Attendance).where(
             Attendance.user_id == user.id,
@@ -169,24 +170,22 @@ def create_attendance(
         )
     
     if active_plan.plan.role == PlanRole.TAQUILLERO:
-        if active_plan.plan.days == 0:
+        if active_plan.duration_days == 0:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="El plan taquillero del usuario se quedó sin días"
             )
         
-        active_plan.plan.days -= 1
+        active_plan.duration_days -= 1
 
     else:
-        current_time = datetime.now( timezone.utc )
-        
         # Ensure expires_at is timezone-aware for comparison
         expires_at = active_plan.expires_at
 
         if expires_at.tzinfo is None:
-            expires_at = expires_at.replace( tzinfo = timezone.utc )
+            expires_at = expires_at.replace( tzinfo = pytz.timezone('America/Bogota') )
         
-        if expires_at.date() <= current_time.date():
+        if expires_at.date() <= today:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="El plan del usuario ha expirado"
@@ -240,7 +239,7 @@ def update_attendance(
     for field, value in update_data.items():
         setattr(db_attendance, field, value)
     
-    db_attendance.updated_at = datetime.now(timezone.utc)
+    db_attendance.updated_at = datetime.now(pytz.timezone('America/Bogota'))
     session.add(db_attendance)
     session.commit()
     session.refresh(db_attendance)

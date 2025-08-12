@@ -1,4 +1,4 @@
-from datetime import timezone
+
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlmodel import Session, select
@@ -14,7 +14,9 @@ from app.models.measurement import Measurement
 from app.models.attendance import Attendance
 from datetime import datetime, timedelta
 from app.models.read_models import UserPlanRead, UserRead, UserBase
-from app.core.methods import get_last_plan, check_gym, check_user_by_document_id, check_user_by_document_id_and_gym, check_user_by_email, check_user_by_email_and_gym
+from app.core.methods import get_last_plan, check_gym, check_user_by_document_id, check_user_by_email
+
+import pytz
 
 router = APIRouter()
 
@@ -87,7 +89,7 @@ def create_user_with_plan(
     session.refresh(db_user)
     
     # Create user plan
-    expires_at = datetime.now(timezone.utc) + timedelta(days=plan.duration_days)
+    expires_at = datetime.now(pytz.timezone('America/Bogota')) + timedelta(days=plan.duration_days)
     
     user_plan = UserPlan(
         user_id=db_user.id,
@@ -375,7 +377,7 @@ def update_user(
             )
         
         # Create user plan
-        expires_at = datetime.now(timezone.utc) + timedelta(days=plan.duration_days)
+        expires_at = datetime.now(pytz.timezone('America/Bogota')) + timedelta(days=plan.duration_days)
         
         user_plan = UserPlan(
             user_id=db_user.id,

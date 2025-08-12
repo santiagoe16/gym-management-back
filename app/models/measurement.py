@@ -1,8 +1,9 @@
 from sqlmodel import SQLModel, Field, Relationship
 from typing import Optional
-from datetime import datetime, timezone
+from datetime import datetime
 from decimal import Decimal
 from pydantic import field_serializer
+import pytz
 
 class MeasurementBase(SQLModel):
     user_id: int = Field(foreign_key="users.id", description="User whose measurements are being recorded")
@@ -31,7 +32,7 @@ class MeasurementBase(SQLModel):
     
     # Additional notes
     notes: Optional[str] = Field(None, description="Additional notes about the measurements")
-    measurement_date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="Date when measurements were taken")
+    measurement_date: datetime = Field(default_factory=lambda: datetime.now(pytz.timezone('America/Bogota')), description="Date when measurements were taken")
 
     # Custom serializers for Decimal fields
     @field_serializer('height', 'weight', 'chest', 'shoulders', 'biceps_left', 'biceps_right', 
@@ -48,8 +49,8 @@ class Measurement(MeasurementBase, table=True):
     recorded_by_id: int = Field(foreign_key="users.id", description="Admin or trainer who recorded the measurements")
     
     id: Optional[int] = Field(default=None, primary_key=True)
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(pytz.timezone('America/Bogota')))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(pytz.timezone('America/Bogota')))
     
     # Relationships
     user: "User" = Relationship(back_populates="measurements", sa_relationship_kwargs={"foreign_keys": "[Measurement.user_id]"})
