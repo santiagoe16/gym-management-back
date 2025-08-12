@@ -44,7 +44,7 @@ class UserCreateWithPassword(UserBase):
 class UserCreateWithPlan(UserBase):
     gym_id: Optional[int] = None
     plan_id: int
-    payment_type: PaymentType
+    payment_type: Optional[PaymentType] = None
     purchased_price: Optional[float] = None  # If not provided, will use plan's base_price
 
 class UserUpdate(SQLModel):
@@ -55,6 +55,7 @@ class UserUpdate(SQLModel):
     gym_id: Optional[int] = None
     role: Optional[UserRole] = None
     plan_id: Optional[int] = None
+    payment_type: Optional[PaymentType] = None
     is_active: Optional[bool] = None
     schedule_start: Optional[str] = None
     schedule_end: Optional[str] = None

@@ -385,7 +385,8 @@ def update_user(
             plan_id=plan.id,
             purchased_price=plan.price,
             expires_at=expires_at,
-            created_by_id=current_user.id
+            created_by_id=current_user.id,
+            payment_type=user_update.payment_type
         )
 
         session.add(user_plan)
