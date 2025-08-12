@@ -2,7 +2,7 @@ from sqlmodel import SQLModel, Field, Relationship
 from typing import Optional
 from datetime import datetime
 from decimal import Decimal
-from app.models.auth import PaymentType
+from app.models.enums import PaymentType
 import pytz
 
 
@@ -33,6 +33,7 @@ class UserPlanCreate(SQLModel):
     user_id: int
     plan_id: int
     purchased_price: Decimal
+    payment_type: PaymentType
     expires_at: datetime
 
 class UserPlanUpdate(SQLModel):

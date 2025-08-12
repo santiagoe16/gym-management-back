@@ -2,12 +2,8 @@ from enum import Enum
 from sqlmodel import SQLModel, Field, Relationship
 from typing import Optional, List
 from datetime import datetime
+from app.models.enums import UserRole, PaymentType
 import pytz
-
-class UserRole(str, Enum):
-    ADMIN = "admin"
-    TRAINER = "trainer"
-    USER = "user"
 
 class UserBase(SQLModel):
     email: str = Field( index = True)
@@ -48,6 +44,7 @@ class UserCreateWithPassword(UserBase):
 class UserCreateWithPlan(UserBase):
     gym_id: Optional[int] = None
     plan_id: int
+    payment_type: PaymentType
     purchased_price: Optional[float] = None  # If not provided, will use plan's base_price
 
 class UserUpdate(SQLModel):

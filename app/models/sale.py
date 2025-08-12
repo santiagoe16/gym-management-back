@@ -1,9 +1,11 @@
+from enum import Enum
 from sqlmodel import SQLModel, Field, Relationship
 from typing import Optional
 from datetime import datetime
 from decimal import Decimal
+from app.models.enums import PaymentType
 import pytz
-from app.models.auth import PaymentType
+
 
 class SaleBase(SQLModel):
     product_id: int = Field(foreign_key="products.id")
@@ -31,6 +33,7 @@ class SaleCreate(SQLModel):
     product_id: int
     gym_id: Optional[int] = None
     quantity: int
+    payment_type: PaymentType
 
 class SaleUpdate(SQLModel):
     payment_type: Optional[PaymentType] = None

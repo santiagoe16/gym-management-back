@@ -3,11 +3,8 @@ from sqlmodel import SQLModel, Field, Relationship
 from typing import Optional, List
 from datetime import datetime
 from decimal import Decimal
+from app.models.enums import PlanRole
 import pytz
-
-class PlanRole(str, Enum):
-    REGULAR = "regular"
-    TAQUILLERO = "taquillero"
 
 class PlanBase(SQLModel):
     name: str = Field(unique=True, index=True)
