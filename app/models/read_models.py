@@ -54,7 +54,8 @@ class UserPlanRead(UserPlanBase):
     id: int
     is_active: bool
     created_at: datetime
-    updated_at: datetime 
+    updated_at: datetime
+    duration_days: int
     plan: Union["PlanRead", None] = Field(default=None)
     created_by: Union["UserBase", None] = Field(default=None)
     user: Union["UserRead", None] = Field(default=None)
