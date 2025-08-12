@@ -33,6 +33,7 @@ class SaleCreate(SQLModel):
     quantity: int
 
 class SaleUpdate(SQLModel):
+    payment_type: Optional[PaymentType] = None
     quantity: Optional[int] = None
     unit_price: Optional[Decimal] = None
     sale_date: Optional[datetime] = None

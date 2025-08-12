@@ -36,6 +36,7 @@ class UserPlanCreate(SQLModel):
     expires_at: datetime
 
 class UserPlanUpdate(SQLModel):
+    payment_type: Optional[PaymentType] = None
     plan_id: Optional[int] = None
     expires_at: Optional[datetime] = None
     is_active: Optional[bool] = None
