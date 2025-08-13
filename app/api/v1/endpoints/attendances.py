@@ -179,6 +179,7 @@ def create_attendance(
         for user_plan in user.user_plans:
             if user_plan.id == active_plan.id:
                 user_plan.duration_days -= 1
+                
                 session.add(user_plan)
                 session.commit()
                 session.refresh(user_plan)

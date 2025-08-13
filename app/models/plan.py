@@ -20,16 +20,12 @@ class Plan(PlanBase, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     created_at: datetime = Field(default_factory=lambda: datetime.now(pytz.timezone('America/Bogota')))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(pytz.timezone('America/Bogota')))
-
-    days: Optional[int] = None
     
     # Relationships
     gym: "Gym" = Relationship(back_populates="plans")
     user_plans: List["UserPlan"] = Relationship(back_populates="plan")
 
 class PlanCreate(PlanBase):
-    days: Optional[int] = None
-    
     pass
 
 class PlanUpdate(SQLModel):

@@ -38,6 +38,7 @@ class UserPlanCreate(SQLModel):
 
 class UserPlanUpdate(SQLModel):
     payment_type: Optional[PaymentType] = None
+    duration_days: Optional[int] = None
     plan_id: Optional[int] = None
     expires_at: Optional[datetime] = None
     is_active: Optional[bool] = None

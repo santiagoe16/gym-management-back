@@ -25,7 +25,7 @@ class PlanRead(PlanBase):
     updated_at: datetime
     gym: Union["GymRead", None] = Field(default=None)
     role: PlanRole = PlanRole.REGULAR
-    days: Optional[int] = None
+    duration_days: Optional[ int ] = None
 
 class ProductRead(ProductBase):
     id: int
@@ -55,7 +55,7 @@ class UserPlanRead(UserPlanBase):
     is_active: bool
     created_at: datetime
     updated_at: datetime
-    duration_days: int
+    duration_days: Optional[ int ] = None
     plan: Union["PlanRead", None] = Field(default=None)
     created_by: Union["UserBase", None] = Field(default=None)
     user: Union["UserRead", None] = Field(default=None)

@@ -191,6 +191,9 @@ def update_user_plan(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Trainers can only modify user plans if the current plan has expired or if upgrading to a better plan"
             )
+    else:
+        if user_plan_update.duration_days:
+            db_user_plan.duration_days = user_plan_update.duration_days
     
     # Update the user plan
     update_data = user_plan_update.model_dump(exclude_unset=True)

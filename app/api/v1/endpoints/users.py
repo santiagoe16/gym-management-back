@@ -97,7 +97,8 @@ def create_user_with_plan(
         purchased_price=plan.price,
         expires_at=expires_at,
         created_by_id=current_user.id,
-        payment_type=user.payment_type
+        payment_type=user.payment_type,
+        duration_days=plan.duration_days
     )
     
     session.add( user_plan )
@@ -386,7 +387,8 @@ def update_user(
             purchased_price=plan.price,
             expires_at=expires_at,
             created_by_id=current_user.id,
-            payment_type=user_update.payment_type
+            payment_type=user_update.payment_type,
+            duration_days=plan.duration_days
         )
 
         session.add(user_plan)
