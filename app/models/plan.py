@@ -20,13 +20,15 @@ class Plan(PlanBase, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     created_at: datetime = Field(default_factory=lambda: datetime.now(pytz.timezone('America/Bogota')))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(pytz.timezone('America/Bogota')))
+
+    days: Optional[int] = None
     
     # Relationships
     gym: "Gym" = Relationship(back_populates="plans")
     user_plans: List["UserPlan"] = Relationship(back_populates="plan")
 
 class PlanCreate(PlanBase):
-    pass
+    days: Optional[int] = None
 
 class PlanUpdate(SQLModel):
     name: Optional[str] = None
@@ -34,4 +36,4 @@ class PlanUpdate(SQLModel):
     duration_days: Optional[int] = None
     gym_id: Optional[int] = None
     is_active: Optional[bool] = None
-    
+    days: Optional[int] = None

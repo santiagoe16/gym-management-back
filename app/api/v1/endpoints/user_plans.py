@@ -194,6 +194,9 @@ def update_user_plan(
     else:
         if user_plan_update.duration_days:
             db_user_plan.duration_days = user_plan_update.duration_days
+        
+        if user_plan_update.days:
+            db_user_plan.days = user_plan_update.days
     
     # Update the user plan
     update_data = user_plan_update.model_dump(exclude_unset=True)

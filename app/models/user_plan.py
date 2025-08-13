@@ -15,6 +15,7 @@ class UserPlanBase(SQLModel):
     created_by_id: int = Field(foreign_key="users.id")  # Admin or Trainer who created this
     payment_type: PaymentType = Field(default=PaymentType.CASH)
     duration_days: Optional[int] = None
+    days: Optional[int] = None
 
 class UserPlan(UserPlanBase, table=True):
     __tablename__ = "user_plans"
@@ -29,16 +30,10 @@ class UserPlan(UserPlanBase, table=True):
     plan: Optional["Plan"] = Relationship(back_populates="user_plans")
     created_by: Optional["User"] = Relationship(back_populates="created_user_plans", sa_relationship_kwargs={"foreign_keys": "[UserPlan.created_by_id]"})
 
-class UserPlanCreate(SQLModel):
-    user_id: int
-    plan_id: int
-    purchased_price: Decimal
-    payment_type: PaymentType
-    expires_at: datetime
-
 class UserPlanUpdate(SQLModel):
     payment_type: Optional[PaymentType] = None
     duration_days: Optional[int] = None
+    days: Optional[int] = None
     plan_id: Optional[int] = None
     expires_at: Optional[datetime] = None
     is_active: Optional[bool] = None

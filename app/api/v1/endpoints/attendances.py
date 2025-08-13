@@ -170,7 +170,7 @@ def create_attendance(
         )
     
     if active_plan.plan.role == PlanRole.TAQUILLERO:
-        if active_plan.duration_days == 0:
+        if active_plan.days == 0:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="El plan taquillero del usuario se quedó sin días"
@@ -178,8 +178,8 @@ def create_attendance(
         
         for user_plan in user.user_plans:
             if user_plan.id == active_plan.id:
-                user_plan.duration_days -= 1
-                
+                user_plan.days -= 1
+
                 session.add(user_plan)
                 session.commit()
                 session.refresh(user_plan)
