@@ -27,7 +27,7 @@ def read_attendance(
     current_user: User = Depends(require_trainer_or_admin)
 ):
     """Get all attendance records - Admin and Trainer access only"""
-    query = select(Attendance).options(joinedload(Attendance.user), joinedload(Attendance.recorded_by), joinedload(Attendance.gym))
+    query = select( Attendance ).options( joinedload( Attendance.user ), joinedload( Attendance.recorded_by ), joinedload( Attendance.gym ) )
     
     # Filter by user if specified
     if user_id:
@@ -48,7 +48,7 @@ def read_attendance(
     attendance_records = session.exec(query.offset(skip).limit(limit)).all()
     return attendance_records
 
-@router.get("/user/{user_id}/summary")
+@router.get( "/user/{user_id}/summary" )
 def get_user_attendance_summary(
     user_id: int,
     start_date: Optional[date] = Query(None, description="Start date for summary"),
@@ -60,8 +60,13 @@ def get_user_attendance_summary(
     check_gym( session, current_user.gym_id )
     
     user = check_user_by_id( session, user_id )
+    active_plan = get_last_plan( user )
 
-    query = select( Attendance ).options( joinedload( Attendance.user ), joinedload( Attendance.gym ), joinedload( Attendance.recorded_by ) ).where( Attendance.user_id == user_id, Attendance.gym_id == current_user.gym_id )
+    query = select( Attendance ).options( 
+        joinedload( Attendance.user ), 
+        joinedload( Attendance.gym ), 
+        joinedload( Attendance.recorded_by ) 
+    ).where( Attendance.user_id == user_id, Attendance.gym_id == current_user.gym_id )
     
     # Filter by date range if specified
     if start_date:
@@ -88,7 +93,8 @@ def get_user_attendance_summary(
         "period": {
             "start_date": start_date,
             "end_date": end_date
-        }
+        },
+        "active_plan": active_plan
     }
 
 @router.get("/daily/{attendance_date}", response_model=List[AttendanceRead])

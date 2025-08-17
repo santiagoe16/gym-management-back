@@ -54,11 +54,12 @@ def create_plan(
 ):
     """Create a new plan - Admin access only"""
     # Check if plan with same name already exists
-    existing_plan = session.exec(select(Plan).where(Plan.name == plan.name)).first()
+    existing_plan = session.exec( select( Plan ).where( Plan.name == plan.name, Plan.gym_id == plan.gym_id ) ).first()
+
     if existing_plan:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Ya existe un plan con este nombre"
+            status_code = status.HTTP_400_BAD_REQUEST,
+            detail = "Ya existe un plan con este nombre"
         )
     
     db_plan = Plan.model_validate(plan)
@@ -66,6 +67,7 @@ def create_plan(
     session.add(db_plan)
     session.commit()
     session.refresh(db_plan)
+    
     return db_plan
 
 @router.get("/{plan_id}", response_model=PlanRead)

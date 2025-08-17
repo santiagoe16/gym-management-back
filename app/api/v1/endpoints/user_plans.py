@@ -8,7 +8,7 @@ from app.core.deps import require_admin, require_trainer_or_admin
 from app.models.user import User, UserRole
 from app.models.plan import Plan
 from app.models.user_plan import UserPlan, UserPlanUpdate
-from datetime import datetime, timezone, date
+from datetime import datetime, date
 from app.models.read_models import UserPlanRead
 import pytz
 
@@ -36,7 +36,7 @@ def read_user_plans(
         query = query.where( UserPlan.plan_id == plan_id )
     
     if gym_id:
-        query = query.where( Plan.gym_id == gym_id )
+        query = query.where( UserPlan.plan.has( Plan.gym_id == gym_id ) )
     
     if start_date:
         query = query.where( func.date( UserPlan.purchased_at ) >= start_date )
@@ -57,13 +57,17 @@ def read_daily_user_plans(
     current_user: User = Depends(require_trainer_or_admin)
 ):
     """Get user plans for a specific date - Admin can see all, Trainer sees only their own"""
-    query = select( UserPlan ).options( selectinload( UserPlan.user ), selectinload( UserPlan.plan ), selectinload( UserPlan.created_by ) ).where( func.date( UserPlan.purchased_at ) == purchased_at )
+    query = select( UserPlan ).options( 
+        selectinload( UserPlan.user ), 
+        selectinload( UserPlan.plan ), 
+        selectinload( UserPlan.created_by ) 
+    ).where( func.date( UserPlan.purchased_at ) == purchased_at )
     
     if trainer_id:
         query = query.where( UserPlan.created_by_id == trainer_id )
     
     if gym_id:
-        query = query.where( Plan.gym_id == gym_id )
+        query = query.where( UserPlan.plan.has( Plan.gym_id == gym_id ) )
     
     if current_user.role == UserRole.TRAINER:
         query = query.where( UserPlan.created_by_id == current_user.id )

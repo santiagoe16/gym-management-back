@@ -87,23 +87,19 @@ def read_sales(
     current_user: User = Depends(require_trainer_or_admin)
 ):
     """Get all sales with filters - Admin can see all, Trainer sees only their own"""
-    query = select(Sale).options(selectinload(Sale.product), selectinload(Sale.sold_by), selectinload(Sale.gym))
+    query = select( Sale ).options( selectinload( Sale.product ), selectinload( Sale.sold_by ), selectinload( Sale.gym ) )
     
     # Apply filters
     if trainer_id:
-        query = query.where(Sale.sold_by_id == trainer_id)
+        query = query.where( Sale.sold_by_id == trainer_id )
     if product_id:
-        query = query.where(Sale.product_id == product_id)
+        query = query.where( Sale.product_id == product_id )
     if start_date:
-        query = query.where(func.date(Sale.sale_date) >= start_date)
+        query = query.where( func.date( Sale.sale_date ) >= start_date )
     if end_date:
-        query = query.where(func.date(Sale.sale_date) <= end_date)
+        query = query.where( func.date( Sale.sale_date ) <= end_date )
     
-    # If trainer, only show their own sales. Admin can see all sales.
-    if current_user.role == UserRole.TRAINER:
-        query = query.where(Sale.sold_by_id == current_user.id)
-    
-    sales = session.exec(query.offset(skip).limit(limit)).all()
+    sales = session.exec( query.offset( skip ).limit( limit ) ).all()
     
     return sales
 
@@ -116,16 +112,13 @@ def read_daily_sales(
     current_user: User = Depends(require_trainer_or_admin)
 ):
     """Get sales for a specific date - Admin can see all, Trainer sees only their own"""
-    query = select(Sale).options(selectinload(Sale.product), selectinload(Sale.sold_by), selectinload(Sale.gym)).where(func.date(Sale.sale_date) == sale_date)
+    query = select( Sale ).options(selectinload( Sale.product ), selectinload( Sale.sold_by ), selectinload( Sale.gym ) ).where( func.date( Sale.sale_date ) == sale_date )
     
     if trainer_id:
         query = query.where( Sale.sold_by_id == trainer_id )
     
     if gym_id:
         query = query.where( Sale.gym_id == gym_id )
-    
-    if current_user.role == UserRole.TRAINER:
-        query = query.where( Sale.sold_by_id == current_user.id )
     
     sales = session.exec( query ).all()
     

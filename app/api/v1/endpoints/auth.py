@@ -10,7 +10,7 @@ from app.core.methods import get_user_by_email
 router = APIRouter()
 
 @router.post("/login", response_model=Token)
-def login(login_data: LoginRequest, session: Session = Depends(get_session)):
+def login( login_data: LoginRequest, session: Session = Depends( get_session ) ):
     user = get_user_by_email( session, login_data.email )
     
     if user.role == UserRole.USER:
@@ -32,14 +32,7 @@ def login(login_data: LoginRequest, session: Session = Depends(get_session)):
             headers={"WWW-Authenticate": "Bearer"},
         )
     
-    if user.role == UserRole.TRAINER and user.gym_id != login_data.gym_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="El usuario no pertenece a este gimnasio"
-        )
-    
-    # Create access token without expiration - user stays logged in until logout
-    access_token = create_access_token(data={"sub": user.email})
+    access_token = create_access_token( data = { "sub": user.email } )
 
     user.gym_id = login_data.gym_id
 
@@ -47,10 +40,10 @@ def login(login_data: LoginRequest, session: Session = Depends(get_session)):
     session.commit()
     session.refresh(user)
 
-    return Token( access_token = access_token, token_type = "bearer", user = user)
+    return Token( access_token = access_token, token_type = "bearer", user = user )
 
 @router.get("/me")
-def read_users_me(current_user: User = Depends(get_current_active_user)):
+def read_users_me( current_user: User = Depends( get_current_active_user ) ):
     user_data = {
         "id": current_user.id,
         "email": current_user.email,

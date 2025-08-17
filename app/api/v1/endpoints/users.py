@@ -6,7 +6,7 @@ from sqlalchemy.orm import selectinload
 from app.core.database import get_session
 from app.core.security import get_password_hash
 from app.core.deps import require_admin, require_trainer_or_admin
-from app.models.user import User, UserCreateWithPassword, UserCreateWithPlan, UserUpdate, UserRole
+from app.models.user import User, UserCreateWithPassword, UserCreateWithPlan, UserUpdate, UserRole, PaymentType
 from app.models.plan import Plan
 from app.models.user_plan import UserPlan
 from app.models.sale import Sale
@@ -309,35 +309,36 @@ def read_regular_users(
     return user_list 
 
 
-@router.put("/{user_id}", response_model=UserRead)
+@router.put( "/{user_id}", response_model = UserRead )
 def update_user(
     user_id: int,
     user_update: UserUpdate,
-    session: Session = Depends(get_session),
-    current_user: User = Depends(require_trainer_or_admin)
+    payment_type: Optional[ PaymentType ] = Query( None, description = "To update the payment type of the plan" ),
+    session: Session = Depends( get_session ),
+    current_user: User = Depends( require_trainer_or_admin )
 ):
     """Update a user - Admin and Trainer access with restrictions"""
-    db_user = session.exec(select(User).where(User.id == user_id)).first()
+    db_user = session.exec( select( User ).where( User.id == user_id ) ).first()
 
     if db_user is None:
-        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+        raise HTTPException( status_code = 404, detail = "Usuario no encontrado" )
     
     # If trainer, only allow updating regular users in their gym
     if current_user.role == UserRole.TRAINER:
         if db_user.role != UserRole.USER:
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Los entrenadores solo pueden actualizar usuarios regulares"
+                status_code = status.HTTP_403_FORBIDDEN,
+                detail = "Los entrenadores solo pueden actualizar usuarios regulares"
             )
         
         if user_update.role is not None:
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Los entrenadores no pueden cambiar roles de usuario"
+                status_code = status.HTTP_403_FORBIDDEN,
+                detail = "Los entrenadores no pueden cambiar roles de usuario"
             )
     
     if user_update.email and user_update.email != db_user.email:
-        existing_user = session.exec(select(User).where(User.email == user_update.email)).first()
+        existing_user = session.exec( select( User ).where( User.email == user_update.email ) ).first()
 
         if existing_user:
             raise HTTPException(
@@ -354,7 +355,7 @@ def update_user(
                 detail="El número de documento ya está registrado"
             )
         
-    user_data = user_update.model_dump(exclude_unset=True)
+    user_data = user_update.model_dump( exclude_unset = True )
 
     # Handle plan_id separately since it's not a field in the User model
     plan_id = user_data.pop('plan_id', None)
@@ -388,7 +389,7 @@ def update_user(
             purchased_price=plan.price,
             expires_at=expires_at,
             created_by_id=current_user.id,
-            payment_type=user_update.payment_type,
+            payment_type=payment_type,
             duration_days=plan.duration_days,
             days=plan.days
         )

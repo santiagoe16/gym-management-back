@@ -55,7 +55,6 @@ class UserUpdate(SQLModel):
     gym_id: Optional[int] = None
     role: Optional[UserRole] = None
     plan_id: Optional[int] = None
-    payment_type: Optional[PaymentType] = None
     is_active: Optional[bool] = None
     schedule_start: Optional[str] = None
     schedule_end: Optional[str] = None
