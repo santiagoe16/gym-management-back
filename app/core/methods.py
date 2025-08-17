@@ -139,7 +139,7 @@ def get_user_by_email( session: Session, email: str ):
     if not user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Este usuario no existe"
+            detail="Correo electrónico o contraseña incorrectos"
         )
 
     return user
