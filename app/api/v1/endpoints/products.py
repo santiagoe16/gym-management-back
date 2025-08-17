@@ -121,9 +121,9 @@ def update_product(
         raise HTTPException(status_code=404, detail="Producto no encontrado")
     
     if product_update.name:
-        db_product = session.exec( select( Product ).where( Product.name == product_update.name, Product.gym_id == db_product.gym_id ) ).first()
+        existing_product = session.exec( select( Product ).where( Product.name == product_update.name, Product.gym_id == db_product.gym_id ) ).first()
         
-        if db_product:
+        if existing_product:
             raise HTTPException( status_code = 404, detail=  "Ya existe un producto con este nombre" )
     
     # Update product data

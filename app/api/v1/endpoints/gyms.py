@@ -78,9 +78,9 @@ def update_gym(
         raise HTTPException( status_code = 404, detail = "Gimnasio no encontrado" )
     
     if gym_update.name:
-        db_gym = session.exec( select( Gym ).where( Gym.name == gym_update.name ) ).first()
+        existing_gym = session.exec( select( Gym ).where( Gym.name == gym_update.name ) ).first()
         
-        if db_gym is None:
+        if existing_gym is None:
             raise HTTPException( status_code = 404, detail=  "Ya existe un gimnasio con este nombre" )
     
     # Update gym data
