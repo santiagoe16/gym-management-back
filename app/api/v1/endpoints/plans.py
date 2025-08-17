@@ -95,8 +95,15 @@ def update_plan(
 ):
     """Update a plan - Admin access only"""
     db_plan = session.exec(select(Plan).where(Plan.id == plan_id)).first()
+
     if db_plan is None:
         raise HTTPException(status_code=404, detail="Plan no encontrado")
+    
+    if plan_update.name:
+        db_plan = session.exec( select( Plan ).where( Plan.name == plan_update.name, Plan.gym_id == db_plan.gym_id ) ).first()
+        
+        if db_plan:
+            raise HTTPException( status_code = 404, detail=  "Ya existe un plan con este nombre" )
     
     # Update plan data
     plan_data = plan_update.model_dump(exclude_unset=True)

@@ -72,9 +72,16 @@ def update_gym(
     current_user: User = Depends(require_admin)
 ):
     """Update a gym - Admin access only"""
-    db_gym = session.exec(select(Gym).where(Gym.id == gym_id)).first()
+    db_gym = session.exec( select( Gym ).where( Gym.id == gym_id ) ).first()
+
     if db_gym is None:
-        raise HTTPException(status_code=404, detail="Gimnasio no encontrado")
+        raise HTTPException( status_code = 404, detail = "Gimnasio no encontrado" )
+    
+    if gym_update.name:
+        db_gym = session.exec( select( Gym ).where( Gym.name == gym_update.name ) ).first()
+        
+        if db_gym is None:
+            raise HTTPException( status_code = 404, detail=  "Ya existe un gimnasio con este nombre" )
     
     # Update gym data
     gym_data = gym_update.model_dump(exclude_unset=True)

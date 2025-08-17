@@ -76,7 +76,8 @@ def create_product(
 ):
     """Create a new product - Admin access only"""
     # Check if product with same name already exists
-    existing_product = session.exec(select(Product).where(Product.name == product.name)).first()
+    existing_product = session.exec( select( Product ).where( Product.name == product.name, Product.gym_id == product.gym_id ) ).first()
+
     if existing_product:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -115,8 +116,15 @@ def update_product(
 ):
     """Update a product - Admin access only"""
     db_product = session.exec(select(Product).where(Product.id == product_id)).first()
+
     if db_product is None:
         raise HTTPException(status_code=404, detail="Producto no encontrado")
+    
+    if product_update.name:
+        db_product = session.exec( select( Product ).where( Product.name == product_update.name, Product.gym_id == db_product.gym_id ) ).first()
+        
+        if db_product:
+            raise HTTPException( status_code = 404, detail=  "Ya existe un producto con este nombre" )
     
     # Update product data
     product_data = product_update.model_dump(exclude_unset=True)
