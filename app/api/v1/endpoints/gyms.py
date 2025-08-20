@@ -15,7 +15,7 @@ def read_gyms(
     limit: int = 100,
     session: Session = Depends(get_session)
 ):
-    gyms = session.exec(select(Gym).offset(skip).limit(limit)).all()
+    gyms = session.exec( select( Gym ).offset( skip ).limit( limit ) ).all()
     
     return gyms
 
@@ -91,6 +91,7 @@ def update_gym(
     session.add(db_gym)
     session.commit()
     session.refresh(db_gym)
+
     return db_gym
 
 @router.delete("/{gym_id}")

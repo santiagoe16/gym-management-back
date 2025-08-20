@@ -21,6 +21,8 @@ class User(UserBase, table=True):
     hashed_password: Optional[str] = None  # Only for admin and trainer users
     schedule_start: Optional[str] = None  # Only for trainer users
     schedule_end: Optional[str] = None  # Only for trainer users
+    fingerprint1: Optional[bytes] = None  # Only for users
+    fingerprint2: Optional[bytes] = None  # Only for users
     created_at: datetime = Field(default_factory=lambda: datetime.now(pytz.timezone('America/Bogota')))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(pytz.timezone('America/Bogota')))
     

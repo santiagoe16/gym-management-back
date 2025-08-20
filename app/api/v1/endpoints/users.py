@@ -363,6 +363,7 @@ def update_user(
     for key, value in user_data.items():
         setattr(db_user, key, value)
     
+    db_user.updated_at = datetime.now(pytz.timezone('America/Bogota'))
     session.add(db_user)
     session.commit()
     session.refresh(db_user)

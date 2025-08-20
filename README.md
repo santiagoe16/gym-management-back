@@ -1,6 +1,6 @@
 # Gym Management Backend
 
-A comprehensive backend API for gym management system built with FastAPI, SQLModel, and MySQL.
+A comprehensive backend API for gym management system built with FastAPI, SQLModel, and MySQL. Features include real-time WebSocket communication for fingerprint device integration, automated gym access control, and comprehensive user management.
 
 ## 🏗️ Project Structure
 
@@ -11,13 +11,16 @@ gym-management-backend/
 │   │   └── v1/
 │   │       ├── endpoints/
 │   │       │   ├── auth.py          # Authentication endpoints
-│   │       │   └── users.py         # User management endpoints
+│   │       │   ├── users.py         # User management endpoints
+│   │       │   └── websocket.py     # WebSocket endpoints for fingerprint devices
 │   │       └── api.py               # Main API router
 │   ├── core/
 │   │   ├── config.py                # Application settings
 │   │   ├── database.py              # Database configuration
 │   │   ├── deps.py                  # Dependency injection
 │   │   ├── security.py              # Security utilities
+│   │   ├── websocket_service.py     # WebSocket connection management
+│   │   ├── encryption_service.py    # Fingerprint data encryption
 │   │   └── init_db.py               # Database initialization
 │   └── models/
 │       ├── user.py                  # User models and roles
@@ -349,6 +352,46 @@ After running `init_db.py`, these users are created:
 - `PUT /api/v1/attendance/{attendance_id}` - Update attendance record (Admin/Trainer)
 - `DELETE /api/v1/attendance/{attendance_id}` - Delete attendance record (Admin only)
 
+### WebSocket System
+- `GET /ws/health` - WebSocket connection health check
+- `WS /ws/user/{user_id}` - User WebSocket endpoint for fingerprint device communication
+- `WS /ws/gym/{gym_id}` - Gym WebSocket endpoint for fingerprint device management
+
+#### WebSocket Architecture
+The system implements a real-time communication layer for fingerprint device integration:
+
+**Connection Types:**
+- **User Connections** (`/ws/user/{user_id}`): Individual user connections for fingerprint device communication
+- **Gym Connections** (`/ws/gym/{gym_id}`): Gym-level connections for fingerprint device management and user enrollment
+
+**Message Flow:**
+1. **Device Authentication**: Fingerprint devices connect to gym endpoints and authenticate with admin/trainer credentials
+2. **User Enrollment**: Devices can enroll new users by capturing and storing fingerprint templates
+3. **Real-time Communication**: Bidirectional communication between devices, gym systems, and user applications
+4. **Fingerprint Storage**: Secure storage of encrypted fingerprint data in the database
+
+**Supported Message Types:**
+- `login` - Device authentication with gym credentials
+- `fingerprint_connected` - Establish connection between user and gym systems
+- `user` - User identification and enrollment requests
+- `store_fingerprint` - Store captured fingerprint templates
+- `finger1_captured` - Fingerprint capture confirmation
+- `download_templates` - Download user fingerprint templates for device
+- `user_found` / `user_not_found` - User identification results
+- `enrollment_completed` - User enrollment completion confirmation
+
+**Security Features:**
+- **Role-based Access**: Only admin/trainer users can authenticate devices
+- **Encryption**: Fingerprint data is encrypted before storage
+- **Connection Validation**: All connections are validated and monitored
+- **Error Handling**: Comprehensive error handling with detailed error messages
+
+**Use Cases:**
+- **Gym Access Control**: Fingerprint-based entry systems
+- **User Enrollment**: New member fingerprint registration
+- **Attendance Tracking**: Automated check-in/check-out
+- **Device Management**: Centralized fingerprint device administration
+
 ## 🚀 Railway Deployment
 
 ### 1. Install Railway CLI
@@ -521,6 +564,290 @@ Trainers can only modify user plans under specific conditions:
 Once running, visit:
 - **Swagger UI**: http://localhost:8000/docs
 - **ReDoc**: http://localhost:8000/redoc
+
+## 🔌 WebSocket System Documentation
+
+### Overview
+The WebSocket system provides real-time communication between fingerprint devices, gym management systems, and user applications. It enables automated gym access control, user enrollment, and attendance tracking.
+
+### Connection Endpoints
+
+#### 1. User WebSocket (`/ws/user/{user_id}`)
+**Purpose**: Individual user connections for fingerprint device communication
+**Authentication**: User ID validation
+**Use Case**: User applications connecting to receive real-time updates
+
+**Connection Example:**
+```javascript
+const userSocket = new WebSocket(`ws://localhost:8000/ws/user/123`);
+```
+
+#### 2. Gym WebSocket (`/ws/gym/{gym_id}`)
+**Purpose**: Gym-level connections for fingerprint device management
+**Authentication**: Admin/trainer login required
+**Use Case**: Fingerprint devices connecting to gym systems
+
+**Connection Example:**
+```javascript
+const gymSocket = new WebSocket(`ws://localhost:8000/ws/gym/1`);
+```
+
+### Message Protocol
+
+#### Authentication Message
+```json
+{
+  "type": "login",
+  "login_data": {
+    "email": "trainer@gym.com",
+    "password": "trainer123"
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "type": "connected"
+}
+```
+
+#### Fingerprint Connection
+```json
+{
+  "type": "fingerprint_connected",
+  "gym_id": "1"
+}
+```
+
+**Response:**
+```json
+{
+  "type": "fingerprint_connection_stablished",
+  "gym_id": "1"
+}
+```
+
+#### User Enrollment
+```json
+{
+  "type": "user",
+  "user_id": "123"
+}
+```
+
+**Response:**
+```json
+{
+  "type": "start_enrollment",
+  "user_id": "123",
+  "full_name": "John Doe",
+  "email": "john@example.com"
+}
+```
+
+#### Fingerprint Storage
+```json
+{
+  "type": "store_fingerprint",
+  "fingerprint_data": "base64_encoded_fingerprint_data",
+  "finger": 1
+}
+```
+
+**Response:**
+```json
+{
+  "type": "fingerprint_stored",
+  "message": "Huella digital almacenada exitosamente",
+  "user_id": "123"
+}
+```
+
+#### Template Download
+```json
+{
+  "type": "download_templates"
+}
+```
+
+**Response:**
+```json
+{
+  "type": "template_data_set",
+  "data": [
+    {
+      "id": "123",
+      "full_name": "John Doe",
+      "fingerprint1": "encrypted_data",
+      "fingerprint2": "encrypted_data"
+    }
+  ]
+}
+```
+
+### Error Handling
+
+#### Authentication Error
+```json
+{
+  "type": "error",
+  "error": "Correo electrónico o contraseña incorrectos"
+}
+```
+
+#### Connection Error
+```json
+{
+  "type": "error",
+  "error": "No se encontró la conexión del gimnasio"
+}
+```
+
+#### Fingerprint Storage Error
+```json
+{
+  "type": "store_error",
+  "error": "Datos de huella digital faltantes"
+}
+```
+
+### Health Monitoring
+
+#### Health Check Endpoint
+```bash
+GET /ws/health
+```
+
+**Response:**
+```json
+{
+  "active_connections": 5,
+  "connected_users": ["123", "456", "789"],
+  "gym_subscriptions": {
+    "1": 2,
+    "2": 1
+  },
+  "status": "healthy"
+}
+```
+
+### Security Implementation
+
+#### Fingerprint Encryption
+- **Storage**: Base64 encoded fingerprint data is encrypted using AES encryption
+- **Transmission**: Data is transmitted securely over WebSocket connections
+- **Access Control**: Only authenticated admin/trainer users can access fingerprint data
+
+#### Connection Validation
+- **User Verification**: All user connections are validated against database records
+- **Role Checking**: Device authentication requires admin/trainer privileges
+- **Session Management**: Active connections are monitored and cleaned up on disconnect
+
+### Integration Examples
+
+#### JavaScript Client
+```javascript
+class FingerprintClient {
+  constructor(gymId) {
+    this.socket = new WebSocket(`ws://localhost:8000/ws/gym/${gymId}`);
+    this.setupEventHandlers();
+  }
+
+  setupEventHandlers() {
+    this.socket.onopen = () => {
+      console.log('Connected to gym system');
+      this.authenticate();
+    };
+
+    this.socket.onmessage = (event) => {
+      const message = JSON.parse(event.data);
+      this.handleMessage(message);
+    };
+  }
+
+  authenticate() {
+    this.socket.send(JSON.stringify({
+      type: 'login',
+      login_data: {
+        email: 'trainer@gym.com',
+        password: 'trainer123'
+      }
+    }));
+  }
+
+  handleMessage(message) {
+    switch (message.type) {
+      case 'connected':
+        console.log('Authentication successful');
+        break;
+      case 'start_enrollment':
+        console.log('Starting enrollment for:', message.full_name);
+        break;
+      case 'fingerprint_stored':
+        console.log('Fingerprint stored successfully');
+        break;
+      case 'error':
+        console.error('Error:', message.error);
+        break;
+    }
+  }
+}
+```
+
+#### Python Client
+```python
+import asyncio
+import websockets
+import json
+
+async def fingerprint_client(gym_id):
+    uri = f"ws://localhost:8000/ws/gym/{gym_id}"
+    
+    async with websockets.connect(uri) as websocket:
+        # Authenticate
+        auth_message = {
+            "type": "login",
+            "login_data": {
+                "email": "trainer@gym.com",
+                "password": "trainer123"
+            }
+        }
+        await websocket.send(json.dumps(auth_message))
+        
+        # Listen for messages
+        async for message in websocket:
+            data = json.loads(message)
+            print(f"Received: {data}")
+            
+            if data.get("type") == "connected":
+                print("Authentication successful")
+                # Start fingerprint operations
+                break
+
+# Run client
+asyncio.run(fingerprint_client(1))
+```
+
+### Troubleshooting
+
+#### Common Issues
+1. **Connection Refused**: Check if the WebSocket service is running
+2. **Authentication Failed**: Verify admin/trainer credentials
+3. **User Not Found**: Ensure user exists in the specified gym
+4. **Fingerprint Storage Error**: Check fingerprint data format and encryption
+
+#### Debug Mode
+Enable debug logging to troubleshoot WebSocket connections:
+```bash
+uvicorn main:app --reload --log-level debug
+```
+
+#### Connection Monitoring
+Use the health endpoint to monitor active connections:
+```bash
+curl http://localhost:8000/ws/health
+```
 
 ### Example Login Response
 ```json
