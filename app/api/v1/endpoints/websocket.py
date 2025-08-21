@@ -132,7 +132,7 @@ async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str, session: Se
                     } )
            
                 elif type == "user":
-                    if websocket_service.check_user_connection( user_websocket ):
+                    if websocket_service.check_user_connection( websocket, user_websocket ):
                         continue
 
                     user_id = message_data.get( "user_id" )
@@ -168,7 +168,7 @@ async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str, session: Se
                     break
 
                 elif type == "store_fingerprint":
-                    if websocket_service.check_user_connection( user_websocket ):
+                    if websocket_service.check_user_connection( websocket, user_websocket ):
                         continue
 
                     if websocket_service.check_user( user ):
@@ -209,13 +209,13 @@ async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str, session: Se
                         })
 
                 elif type == "finger1_captured":
-                    if websocket_service.check_user_connection( user_websocket ):
+                    if websocket_service.check_user_connection( websocket, user_websocket ):
                         continue
 
                     await websocket_service.send_message( user_websocket, message_data )
 
                 elif type == "download_templates":
-                    if websocket_service.check_user_connection( user_websocket ):
+                    if websocket_service.check_user_connection( websocket, user_websocket ):
                         continue
 
                     users = session.exec( 
@@ -239,19 +239,19 @@ async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str, session: Se
                     } )
 
                 elif type == "user_found":
-                    if websocket_service.check_user_connection( user_websocket ):
+                    if websocket_service.check_user_connection( websocket, user_websocket ):
                         continue
 
                     await websocket_service.send_message( user_websocket, message_data )
             
                 elif type == "user_not_found":
-                    if websocket_service.check_user_connection( user_websocket ):
+                    if websocket_service.check_user_connection( websocket, user_websocket ):
                         continue
 
                     await websocket_service.send_message( user_websocket, message_data )
             
                 elif type == "enrollment_completed":
-                    if websocket_service.check_user_connection( user_websocket ):
+                    if websocket_service.check_user_connection( websocket, user_websocket ):
                         continue
 
                     await websocket_service.send_message( user_websocket, message_data )
