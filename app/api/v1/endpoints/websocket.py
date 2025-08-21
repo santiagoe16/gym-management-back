@@ -72,11 +72,11 @@ async def websocket_user_endpoint( websocket: WebSocket, user_id: str ):
 async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str, session: Session = Depends( get_session ) ):
     await websocket_service.connect( websocket, None, gym_id )
 
-    user_websocket = None
-    user = None
-    last_index = 0
-
     try:
+        user_websocket = None
+        user = None
+        last_index = 0
+
         while True:
             data = await websocket.receive_text()
 
@@ -218,6 +218,8 @@ async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str, session: Se
                     if await websocket_service.check_user_connection( websocket, user_websocket ):
                         continue
 
+                    print( "last index", last_index )
+
                     users = session.exec( 
                         select( User ).where( User.gym_id == user.gym_id, User.role == UserRole.USER )
                         .offset( last_index )
@@ -236,6 +238,7 @@ async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str, session: Se
                     for user in users:
                         users_data.append( {
                             "id": user.id,
+                            "document_id": user.document_id,
                             "full_name": user.full_name,
                             "email": user.email,
                             "fingerprint1": await encryption_service.decrypt_byte_array( user.fingerprint1 ) if user.fingerprint1 else None,
@@ -243,6 +246,8 @@ async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str, session: Se
                         } )
 
                     last_index += len( users ) + 1
+
+                    print( "next last index", last_index )
 
                     await websocket_service.send_message( websocket, {
                         "type": "template_data_set",
