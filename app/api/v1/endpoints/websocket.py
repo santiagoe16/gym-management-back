@@ -223,7 +223,7 @@ async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str, session: Se
                     users = session.exec( 
                         select( User ).where( User.gym_id == user.gym_id, User.role == UserRole.USER )
                         .offset( last_index )
-                        .limit( 100 )
+                        .limit( 20 )
                     ).all()
 
                     if len( users ) == 0:
