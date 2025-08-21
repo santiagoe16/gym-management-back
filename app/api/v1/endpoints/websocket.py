@@ -15,8 +15,8 @@ from app.models.user import User
 router = APIRouter()
 
 # WebSocket with user authentication
-@router.websocket( "/ws/user/{user_id}" )
-async def websocket_user_endpoint( websocket: WebSocket, user_id: str, session: Session = Depends( get_session ) ):
+@router.websocket( "/user/{user_id}" )
+async def websocket_user_endpoint( websocket: WebSocket, user_id: str ):
     await websocket_service.connect( websocket, user_id )
 
     gym_websocket = None
@@ -68,7 +68,7 @@ async def websocket_user_endpoint( websocket: WebSocket, user_id: str, session: 
         websocket_service.disconnect( websocket )
 
 # WebSocket with user authentication
-@router.websocket( "/ws/gym/{gym_id}" )
+@router.websocket( "/gym/{gym_id}" )
 async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str, session: Session = Depends( get_session ) ):
     await websocket_service.connect( websocket, None, gym_id )
 
@@ -88,15 +88,13 @@ async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str, session: Se
                 if type == "login":
                     login_data = message_data.get( "login_data" )
 
-                    user = get_user_by_email( session, login_data.email )
+                    user = get_user_by_email( session, login_data[ "email" ] )
                     
                     if user.role == UserRole.USER:
                         await websocket_service._send_message( websocket, {
                             "type": "error",
                             "error": "Los usuarios no pueden iniciar sesión en el sistema"
                         } )
-
-                        await websocket_service.disconnect( websocket )
 
                         continue
                     
@@ -106,17 +104,13 @@ async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str, session: Se
                             "error": "Usuario inactivo"
                         } )
 
-                        await websocket_service.disconnect( websocket )
-
                         continue
                     
-                    if not verify_password( login_data.password, user.hashed_password ):
+                    if not verify_password( login_data[ "password" ], user.hashed_password ):
                         await websocket_service._send_message( websocket, {
                             "type": "error",
                             "error": "Correo electrónico o contraseña incorrectos"
                         } )
-                        
-                        await websocket_service.disconnect( websocket )
                         
                         continue
 
@@ -128,7 +122,7 @@ async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str, session: Se
                             "error": "No se encontró la conexión del usuario"
                         } )
 
-                        await websocket_service.disconnect( websocket )
+                        continue
 
                     await websocket._send_message( { "type": "connected" } )
 
@@ -167,6 +161,11 @@ async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str, session: Se
                             "email": user.email
                         } 
                     )
+
+                elif type == "disconnect":
+                    await websocket_service.disconnect( websocket )
+
+                    break
 
                 elif type == "store_fingerprint":
                     if websocket_service.check_user_connection( user_websocket ):

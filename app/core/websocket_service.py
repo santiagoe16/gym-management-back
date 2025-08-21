@@ -23,14 +23,6 @@ class WebSocketService:
         if user_id:
             self.user_connections[ user_id ] = websocket
         
-        # Send connection confirmation
-        await self._send_message( websocket, {
-            "message": "Connected successfully",
-            "timestamp": datetime.now().isoformat(),
-            "user_id": user_id,
-            "gym_id": gym_id
-        } )
-        
         print( f"WebSocket connected. Total connections: { len( self.user_connections ) + len( self.gym_connections ) }" )
     
     def disconnect( self, websocket: WebSocket ):
@@ -61,8 +53,6 @@ class WebSocketService:
                 "type": "error",
                 "error": "No se encontró la conexión del usuario"
             } )
-
-            websocket_service.disconnect( websocket )
 
             return True
         
