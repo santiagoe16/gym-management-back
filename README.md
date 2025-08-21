@@ -572,24 +572,24 @@ The WebSocket system provides real-time communication between fingerprint device
 
 ### Connection Endpoints
 
-#### 1. User WebSocket (`/ws/user/{user_id}`)
+#### 1. User WebSocket (`/user/{user_id}`)
 **Purpose**: Individual user connections for fingerprint device communication
 **Authentication**: User ID validation
 **Use Case**: User applications connecting to receive real-time updates
 
 **Connection Example:**
 ```javascript
-const userSocket = new WebSocket(`ws://localhost:8000/ws/user/123`);
+const userSocket = new WebSocket(`ws://localhost:8000/user/123`);
 ```
 
-#### 2. Gym WebSocket (`/ws/gym/{gym_id}`)
+#### 2. Gym WebSocket (`/gym/{gym_id}`)
 **Purpose**: Gym-level connections for fingerprint device management
 **Authentication**: Admin/trainer login required
 **Use Case**: Fingerprint devices connecting to gym systems
 
 **Connection Example:**
 ```javascript
-const gymSocket = new WebSocket(`ws://localhost:8000/ws/gym/1`);
+const gymSocket = new WebSocket(`ws://localhost:8000/gym/1`);
 ```
 
 ### Message Protocol
@@ -750,7 +750,7 @@ GET /ws/health
 ```javascript
 class FingerprintClient {
   constructor(gymId) {
-    this.socket = new WebSocket(`ws://localhost:8000/ws/gym/${gymId}`);
+    this.socket = new WebSocket(`ws://localhost:8000/gym/${gymId}`);
     this.setupEventHandlers();
   }
 
@@ -802,7 +802,7 @@ import websockets
 import json
 
 async def fingerprint_client(gym_id):
-    uri = f"ws://localhost:8000/ws/gym/{gym_id}"
+    uri = f"ws://localhost:8000/gym/{gym_id}"
     
     async with websockets.connect(uri) as websocket:
         # Authenticate
@@ -841,12 +841,6 @@ asyncio.run(fingerprint_client(1))
 Enable debug logging to troubleshoot WebSocket connections:
 ```bash
 uvicorn main:app --reload --log-level debug
-```
-
-#### Connection Monitoring
-Use the health endpoint to monitor active connections:
-```bash
-curl http://localhost:8000/ws/health
 ```
 
 ### Example Login Response

@@ -36,30 +36,30 @@ async def websocket_user_endpoint( websocket: WebSocket, user_id: str ):
                     gym_websocket = await websocket_service.get_gym_connection( gym_id )
                     
                     if not gym_websocket:
-                        await websocket_service._send_message( websocket, {
+                        await websocket_service.send_message( websocket, {
                             "type": "error",
                             "error": "No se encontró la conexión del gimnasio"
                         } )
 
                         continue
 
-                    await websocket_service._send_message( websocket, {
+                    await websocket_service.send_message( websocket, {
                         "type": "fingerprint_connection_stablished",
                         "gym_id": gym_id
                     } )
 
                 elif type == "user":
                     if not gym_websocket:
-                        await websocket_service._send_message( websocket, {
+                        await websocket_service.send_message( websocket, {
                             "type": "error",
                             "error": "No se encontró la conexión del gimnasio"
                         } )
                         
                         continue
 
-                    gym_websocket._send_message( message_data )
+                    await websocket_service.send_message( gym_websocket, message_data )
             except json.JSONDecodeError as e:
-                await websocket_service._send_message( websocket, {
+                await websocket_service.send_message( websocket, {
                     "type": "error",
                     "error": f"Error description: { e }",
                     "timestamp": datetime.now().isoformat()
@@ -91,7 +91,7 @@ async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str, session: Se
                     user = get_user_by_email( session, login_data[ "email" ] )
                     
                     if user.role == UserRole.USER:
-                        await websocket_service._send_message( websocket, {
+                        await websocket_service.send_message( websocket, {
                             "type": "error",
                             "error": "Los usuarios no pueden iniciar sesión en el sistema"
                         } )
@@ -99,7 +99,7 @@ async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str, session: Se
                         continue
                     
                     if not user.is_active:
-                        await websocket_service._send_message( websocket, {
+                        await websocket_service.send_message( websocket, {
                             "type": "error",
                             "error": "Usuario inactivo"
                         } )
@@ -107,7 +107,7 @@ async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str, session: Se
                         continue
                     
                     if not verify_password( login_data[ "password" ], user.hashed_password ):
-                        await websocket_service._send_message( websocket, {
+                        await websocket_service.send_message( websocket, {
                             "type": "error",
                             "error": "Correo electrónico o contraseña incorrectos"
                         } )
@@ -117,16 +117,16 @@ async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str, session: Se
                     user_websocket = await websocket_service.get_user_connection( user.id )
 
                     if not user_websocket:
-                        await websocket_service._send_message( websocket, {
+                        await websocket_service.send_message( websocket, {
                             "type": "error",
                             "error": "No se encontró la conexión del usuario"
                         } )
 
                         continue
 
-                    await websocket._send_message( { "type": "connected" } )
+                    await websocket_service.send_message( websocket, { "type": "connected" } )
 
-                    await user_websocket._send_message( { 
+                    await websocket_service.send_message( user_websocket, { 
                         "type": "fingerprint_connected",
                         "gym_id": gym_id
                     } )
@@ -140,19 +140,19 @@ async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str, session: Se
                     user = session.exec( select( User ).where( User.id == user_id ) ).first()
 
                     if not user:
-                        await user_websocket._send_message( websocket, {
+                        await websocket_service.send_message( websocket, {
                             "type": "error",
                             "error": "Usuario no encontrado"
                         } )
 
-                        await websocket_service._send_message( websocket, {
+                        await websocket_service.send_message( websocket, {
                             "type": "user_error",
                             "error": "Usuario no encontrado"
                         } )
 
-                    await user_websocket._send_message( websocket, { "type": "user_established" } )
+                    await websocket_service.send_message( user_websocket, { "type": "user_established" } )
 
-                    await websocket_service._send_message( 
+                    await websocket_service.send_message( 
                         websocket, 
                         { 
                             "type": "start_enrollment",
@@ -179,7 +179,7 @@ async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str, session: Se
                         fingerprint_data = message_data.get( "fingerprint_data" )
 
                         if not fingerprint_data:
-                            await websocket_service._send_message( websocket, {
+                            await websocket_service.send_message( websocket, {
                                 "type": "store_error",
                                 "error": "Datos de huella digital faltantes"
                             })
@@ -196,14 +196,14 @@ async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str, session: Se
                         
                         await websocket_service.store_fingerprint_on_user( user, finger, encrypted_fingerprint, session )
                         
-                        await websocket_service._send_message( websocket, {
+                        await websocket_service.send_message( websocket, {
                             "type": "fingerprint_stored",
                             "message": "Huella digital almacenada exitosamente",
                             "user_id": user.id
                         })
 
                     except Exception as e:
-                        await websocket_service._send_message( websocket, {
+                        await websocket_service.send_message( websocket, {
                             "type": "store_error",
                             "error": f"Error al almacenar huella digital: { str( e ) }"
                         })
@@ -212,7 +212,7 @@ async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str, session: Se
                     if websocket_service.check_user_connection( user_websocket ):
                         continue
 
-                    await user_websocket._send_message( websocket, message_data )
+                    await websocket_service.send_message( user_websocket, message_data )
 
                 elif type == "download_templates":
                     if websocket_service.check_user_connection( user_websocket ):
@@ -225,7 +225,7 @@ async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str, session: Se
                     ).all()
 
                     if len( users ) == 0:
-                        await websocket_service._send_message( websocket, { "type": "download_templates_completed" } )
+                        await websocket_service.send_message( websocket, { "type": "download_templates_completed" } )
 
                         last_index = 0
 
@@ -233,7 +233,7 @@ async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str, session: Se
 
                     last_index += len( users ) + 1
 
-                    await websocket_service._send_message( websocket, {
+                    await websocket_service.send_message( websocket, {
                         "type": "template_data_set",
                         "data": users
                     } )
@@ -242,21 +242,21 @@ async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str, session: Se
                     if websocket_service.check_user_connection( user_websocket ):
                         continue
 
-                    await user_websocket._send_message( websocket, message_data )
+                    await websocket_service.send_message( user_websocket, message_data )
             
                 elif type == "user_not_found":
                     if websocket_service.check_user_connection( user_websocket ):
                         continue
 
-                    await user_websocket._send_message( websocket, message_data )
+                    await websocket_service.send_message( user_websocket, message_data )
             
                 elif type == "enrollment_completed":
                     if websocket_service.check_user_connection( user_websocket ):
                         continue
 
-                    await user_websocket._send_message( websocket, message_data )
+                    await websocket_service.send_message( user_websocket, message_data )
             except json.JSONDecodeError as e:
-                await websocket_service._send_message( websocket, {
+                await websocket_service.send_message( websocket, {
                     "type": "error",
                     "error": f"Error description: { e }",
                     "timestamp": datetime.now().isoformat()

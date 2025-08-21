@@ -73,7 +73,7 @@ class WebSocketService:
         
         return False
     
-    async def _send_message( self, websocket: WebSocket, message: dict ):
+    async def send_message( self, websocket: WebSocket, message: dict ):
         """Send a message to a specific WebSocket"""
         try:
             await websocket.send_text( json.dumps( message ) )
