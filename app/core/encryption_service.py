@@ -9,7 +9,7 @@ class EncryptionService:
         self.secret_key = settings.SECRET_KEY
         self.salt = b'gym_fingerprint_salt'  # Fixed salt for consistency
     
-    def generate_encryption_key( self ) -> bytes:
+    async def generate_encryption_key( self ) -> bytes:
         kdf = PBKDF2HMAC(
             algorithm   = hashes.SHA256(),
             length      = 32,
@@ -19,13 +19,13 @@ class EncryptionService:
 
         return base64.urlsafe_b64encode( kdf.derive( self.secret_key.encode() ) )
     
-    def encrypt_byte_array( self, data: bytes ) -> bytes:
+    async def encrypt_byte_array( self, data: bytes ) -> bytes:
         key = self.generate_encryption_key()
         f   = Fernet( key )
 
         return f.encrypt( data )
     
-    def decrypt_byte_array( self, encrypted_data: bytes ) -> bytes:
+    async def decrypt_byte_array( self, encrypted_data: bytes ) -> bytes:
         key = self.generate_encryption_key()
         f   = Fernet( key )
 

@@ -88,7 +88,7 @@ async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str, session: Se
                 if type == "login":
                     login_data = message_data.get( "login_data" )
 
-                    user = get_user_by_email( session, login_data[ "email" ] )
+                    user = await get_user_by_email( session, login_data[ "email" ] )
                     
                     if user.role == UserRole.USER:
                         await websocket_service.send_message( websocket, {
@@ -132,7 +132,7 @@ async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str, session: Se
                     } )
            
                 elif type == "user":
-                    if websocket_service.check_user_connection( websocket, user_websocket ):
+                    if await websocket_service.check_user_connection( websocket, user_websocket ):
                         continue
 
                     user_id = message_data.get( "user_id" )
@@ -168,10 +168,10 @@ async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str, session: Se
                     break
 
                 elif type == "store_fingerprint":
-                    if websocket_service.check_user_connection( websocket, user_websocket ):
+                    if await websocket_service.check_user_connection( websocket, user_websocket ):
                         continue
 
-                    if websocket_service.check_user( user ):
+                    if await websocket_service.check_user( user ):
                         continue
 
                     try:
@@ -190,7 +190,7 @@ async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str, session: Se
                         fingerprint_bytes = base64.b64decode( fingerprint_data )
                         
                         # Encrypt the fingerprint data
-                        encrypted_fingerprint = encryption_service.encrypt_byte_array( fingerprint_bytes )
+                        encrypted_fingerprint = await encryption_service.encrypt_byte_array( fingerprint_bytes )
 
                         finger = message_data.get( "finger" )
                         
@@ -208,14 +208,14 @@ async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str, session: Se
                             "error": f"Error al almacenar huella digital: { str( e ) }"
                         })
 
-                elif type == "finger1_captured":
-                    if websocket_service.check_user_connection( websocket, user_websocket ):
+                elif type == "finger_captured":
+                    if await websocket_service.check_user_connection( websocket, user_websocket ):
                         continue
 
                     await websocket_service.send_message( user_websocket, message_data )
 
                 elif type == "download_templates":
-                    if websocket_service.check_user_connection( websocket, user_websocket ):
+                    if await websocket_service.check_user_connection( websocket, user_websocket ):
                         continue
 
                     users = session.exec( 
@@ -231,27 +231,38 @@ async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str, session: Se
 
                         continue
 
+                    users_data = []
+
+                    for user in users:
+                        users_data.append( {
+                            "id": user.id,
+                            "full_name": user.full_name,
+                            "email": user.email,
+                            "fingerprint_1": await encryption_service.decrypt_byte_array( user.fingerprint_1 ),
+                            "fingerprint_2": await encryption_service.decrypt_byte_array( user.fingerprint_2 )
+                        } )
+
                     last_index += len( users ) + 1
 
                     await websocket_service.send_message( websocket, {
                         "type": "template_data_set",
-                        "data": users
+                        "data": users_data
                     } )
 
                 elif type == "user_found":
-                    if websocket_service.check_user_connection( websocket, user_websocket ):
+                    if await websocket_service.check_user_connection( websocket, user_websocket ):
                         continue
 
                     await websocket_service.send_message( user_websocket, message_data )
             
                 elif type == "user_not_found":
-                    if websocket_service.check_user_connection( websocket, user_websocket ):
+                    if await websocket_service.check_user_connection( websocket, user_websocket ):
                         continue
 
                     await websocket_service.send_message( user_websocket, message_data )
             
                 elif type == "enrollment_completed":
-                    if websocket_service.check_user_connection( websocket, user_websocket ):
+                    if await websocket_service.check_user_connection( websocket, user_websocket ):
                         continue
 
                     await websocket_service.send_message( user_websocket, message_data )
@@ -262,7 +273,7 @@ async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str, session: Se
                     "timestamp": datetime.now().isoformat()
                 })
     except WebSocketDisconnect:
-        websocket_service.disconnect( websocket )
+        await websocket_service.disconnect( websocket )
 
 # Health check endpoint for WebSocket connections
 @router.get( "/ws/health" )

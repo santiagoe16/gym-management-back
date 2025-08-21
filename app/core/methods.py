@@ -133,8 +133,8 @@ def get_user_by_id( session: Session, user_id: int, gym_id: int ):
 
     return user
 
-def get_user_by_email( session: Session, email: str ):
-    user = session.exec(select(User).where(User.email == email)).first()
+async def get_user_by_email( session: Session, email: str ):
+    user = session.exec( select( User ).where( User.email == email ) ).first()
 
     if not user:
         raise HTTPException(
