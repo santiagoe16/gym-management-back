@@ -188,8 +188,8 @@ async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str, session: Se
                             "document_id": user.document_id,
                             "full_name": user.full_name,
                             "email": user.email,
-                            "fingerprint1": await encryption_service.decrypt_byte_array( user.fingerprint1 ) if user.fingerprint1 else None,
-                            "fingerprint2": await encryption_service.decrypt_byte_array( user.fingerprint2 ) if user.fingerprint2 else None
+                            "fingerprint1": base64.b64encode( await encryption_service.decrypt_byte_array( user.fingerprint1 ) ).decode() if user.fingerprint1 else None,
+                            "fingerprint2": base64.b64encode( await encryption_service.decrypt_byte_array( user.fingerprint2 ) ).decode() if user.fingerprint2 else None
                         } )
 
                     last_index += len( users ) + 1
