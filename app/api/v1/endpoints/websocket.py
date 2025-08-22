@@ -26,6 +26,8 @@ async def websocket_user_endpoint( websocket: WebSocket, user_id: str, gym_id: s
         while True:
             data = await websocket.receive_text()
 
+            print( data )
+
             if not gym_websocket:
                 gym_websocket = await websocket_service.get_gym_connection( gym_id )
 
@@ -43,7 +45,7 @@ async def websocket_user_endpoint( websocket: WebSocket, user_id: str, gym_id: s
                 type = message_data.get( "type" )
 
                 if type == "user":
-                    await websocket_service.send_message( gym_websocket, message_data )
+                    await websocket_service.send_message( gym_websocket, data )
             except json.JSONDecodeError as e:
                 await websocket_service.send_message( websocket, {
                     "type": "error",
@@ -66,6 +68,8 @@ async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str, session: Se
 
         while True:
             data = await websocket.receive_text()
+
+            print( data )
             
             if user_id and not user_websocket:
                 user_websocket = await websocket_service.get_user_connection( user_id )
