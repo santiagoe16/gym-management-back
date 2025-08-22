@@ -55,7 +55,7 @@ async def websocket_user_endpoint( websocket: WebSocket, user_id: str, gym_id: s
 
 # WebSocket with user authentication
 @router.websocket( "/gym/{gym_id}" )
-async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str, user_id: str, session: Session = Depends( get_session ) ):
+async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str, session: Session = Depends( get_session ) ):
     await websocket_service.connect( websocket, None, gym_id )
 
     try:
