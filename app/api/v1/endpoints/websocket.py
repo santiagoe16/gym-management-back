@@ -16,9 +16,9 @@ from app.models.user import User
 router = APIRouter()
 
 # WebSocket with user authentication
-@router.websocket( "/user/{user_id}" )
-async def websocket_user_endpoint( websocket: WebSocket, user_id: str ):
-    await websocket_service.connect( websocket, user_id )
+@router.websocket( "/user/{user_id}/{gym_id}" )
+async def websocket_user_endpoint( websocket: WebSocket, user_id: str, gym_id: str ):
+    await websocket_service.connect( websocket, user_id, gym_id )
 
     gym_websocket = None
 
@@ -26,39 +26,24 @@ async def websocket_user_endpoint( websocket: WebSocket, user_id: str ):
         while True:
             data = await websocket.receive_text()
 
+            if not gym_websocket:
+                gym_websocket = await websocket_service.get_gym_connection( gym_id )
+
+                if not gym_websocket:
+                    await websocket_service.send_message( websocket, {
+                        "type": "error",
+                        "error": "No se encontró la conexión del gimnasio"
+                    } )
+
+                    continue
+
             try:
                 message_data = json.loads( data )
 
                 type = message_data.get( "type" )
 
-                if type == "fingerprint_connected":
-                    gym_id = message_data.get( "gym_id" )
-
-                    gym_websocket = await websocket_service.get_gym_connection( gym_id )
-                    
-                    if not gym_websocket:
-                        await websocket_service.send_message( websocket, {
-                            "type": "error",
-                            "error": "No se encontró la conexión del gimnasio"
-                        } )
-
-                        continue
-
-                    await websocket_service.send_message( websocket, {
-                        "type": "fingerprint_connection_stablished",
-                        "gym_id": gym_id
-                    } )
-
-                elif type == "user":
-                    if not gym_websocket:
-                        await websocket_service.send_message( websocket, {
-                            "type": "error",
-                            "error": "No se encontró la conexión del gimnasio"
-                        } )
-                        
-                        continue
-
-                    await websocket_service.send_message( gym_websocket, message_data )
+                if type == "user":
+                    await websocket_service.send_message( gym_websocket, data )
             except json.JSONDecodeError as e:
                 await websocket_service.send_message( websocket, {
                     "type": "error",
@@ -70,16 +55,28 @@ async def websocket_user_endpoint( websocket: WebSocket, user_id: str ):
 
 # WebSocket with user authentication
 @router.websocket( "/gym/{gym_id}" )
-async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str, session: Session = Depends( get_session ) ):
+async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str, user_id: str, session: Session = Depends( get_session ) ):
     await websocket_service.connect( websocket, None, gym_id )
 
     try:
         user_websocket = None
         user = None
         last_index = 0
+        user_id = None
 
         while True:
             data = await websocket.receive_text()
+            
+            if user_id and not user_websocket:
+                user_websocket = await websocket_service.get_user_connection( user_id )
+
+                if not user_websocket:
+                    await websocket_service.send_message( user_websocket, {
+                        "type": "error",
+                        "error": "No se encontró la conexión del usuario"
+                    } )
+
+                    continue
 
             try:
                 message_data = json.loads( data )
@@ -115,10 +112,12 @@ async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str, session: Se
                         
                         continue
 
-                    user_websocket = await websocket_service.get_user_connection( user.id )
+                    user_id = user.id
+
+                    user_websocket = await websocket_service.get_user_connection( user_id )
 
                     if not user_websocket:
-                        await websocket_service.send_message( websocket, {
+                        await websocket_service.send_message( user_websocket, {
                             "type": "error",
                             "error": "No se encontró la conexión del usuario"
                         } )
@@ -126,19 +125,12 @@ async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str, session: Se
                         continue
 
                     await websocket_service.send_message( websocket, { "type": "connected" } )
-
-                    await websocket_service.send_message( user_websocket, { 
-                        "type": "fingerprint_connected",
-                        "gym_id": gym_id
-                    } )
+                    await websocket_service.send_message( user_websocket, { "type": "fingerprint_connected" } )
            
                 elif type == "user":
-                    if await websocket_service.check_user_connection( websocket, user_websocket ):
-                        continue
+                    id = message_data.get( "id" )
 
-                    user_id = message_data.get( "id" )
-
-                    user = session.exec( select( User ).where( User.id == user_id ) ).first()
+                    user = session.exec( select( User ).where( User.id == id ) ).first()
 
                     if not user:
                         await websocket_service.send_message( websocket, {
@@ -168,51 +160,7 @@ async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str, session: Se
 
                     break
 
-                elif type == "store_fingerprint":
-                    if await websocket_service.check_user_connection( websocket, user_websocket ):
-                        continue
-
-                    if await websocket_service.check_user( user ):
-                        continue
-
-                    try:
-                        # Get fingerprint data from message
-                        fingerprint_data = message_data.get( "fingerprint_data" )
-
-                        if not fingerprint_data:
-                            await websocket_service.send_message( websocket, {
-                                "type": "store_error",
-                                "error": "Datos de huella digital faltantes"
-                            })
-
-                            continue
-                        
-                        # Decode base64 fingerprint data
-                        fingerprint_bytes = base64.b64decode( fingerprint_data )
-                        
-                        # Encrypt the fingerprint data
-                        encrypted_fingerprint = await encryption_service.encrypt_byte_array( fingerprint_bytes )
-
-                        finger = message_data.get( "finger" )
-                        
-                        await websocket_service.store_fingerprint_on_user( user, finger, encrypted_fingerprint, session )
-                        
-                        await websocket_service.send_message( websocket, {
-                            "type": "fingerprint_stored",
-                            "message": "Huella digital almacenada exitosamente",
-                            "user_id": user.id
-                        })
-
-                    except Exception as e:
-                        await websocket_service.send_message( websocket, {
-                            "type": "store_error",
-                            "error": f"Error al almacenar huella digital: { str( e ) }"
-                        })
-
                 elif type == "download_templates":
-                    if await websocket_service.check_user_connection( websocket, user_websocket ):
-                        continue
-
                     users = session.exec( 
                         select( User ).where( User.gym_id == user.gym_id, User.role == UserRole.USER )
                         .offset( last_index )
@@ -246,9 +194,6 @@ async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str, session: Se
                     } )
                     
                 elif type == "enrollment_completed":
-                    if await websocket_service.check_user_connection( websocket, user_websocket ):
-                        continue
-
                     fingerprint_data = message_data.get( "fingerprint1" )
                     fingerprint_data2 = message_data.get( "fingerprint2" )
                     
@@ -305,9 +250,6 @@ async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str, session: Se
 
                     
                 elif type == "capture_quality_bad" or type == "first_finger_enrollment_failed" or type == "first_finger_enrolled" or type == "conversion_failed" or type == "user_not_found" or type == "user_found" or type == "finger_captured":
-                    if await websocket_service.check_user_connection( websocket, user_websocket ):
-                        continue
-
                     await websocket_service.send_message( user_websocket, data )
             except json.JSONDecodeError as e:
                 await websocket_service.send_message( websocket, {
@@ -316,7 +258,7 @@ async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str, session: Se
                     "timestamp": datetime.now().isoformat()
                 })
     except WebSocketDisconnect:
-        await websocket_service.disconnect( websocket )
+        websocket_service.disconnect( websocket )
 
 # Health check endpoint for WebSocket connections
 @router.get( "/ws/health" )

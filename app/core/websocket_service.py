@@ -104,7 +104,7 @@ class WebSocketService:
             if user_id == user_id:
                 await self._send_message( connection, message )
     
-    async def send_to_gym( self, gym_id: int, message: dict ):
+    async def send_to_gym( self, gym_id: str, message: dict ):
         """Send message to all connections subscribed to a gym"""
         if gym_id in self.gym_connections:
             await self._send_message( self.gym_connections[ gym_id ], message )
