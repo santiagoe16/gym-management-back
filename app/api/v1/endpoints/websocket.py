@@ -18,7 +18,7 @@ router = APIRouter()
 # WebSocket with user authentication
 @router.websocket( "/user/{user_id}/{gym_id}" )
 async def websocket_user_endpoint( websocket: WebSocket, user_id: str, gym_id: str ):
-    await websocket_service.connect( websocket, user_id, gym_id )
+    await websocket_service.connect( websocket, user_id, None )
 
     gym_websocket = None
 
