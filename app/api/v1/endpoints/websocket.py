@@ -20,24 +20,21 @@ router = APIRouter()
 async def websocket_user_endpoint( websocket: WebSocket, user_id: str, gym_id: str ):
     await websocket_service.connect( websocket, user_id, None )
 
-    gym_websocket = None
-
     try:
         while True:
             data = await websocket.receive_text()
 
             print( data )
 
+            gym_websocket = await websocket_service.get_gym_connection( gym_id )
+
             if not gym_websocket:
-                gym_websocket = await websocket_service.get_gym_connection( gym_id )
+                await websocket_service.send_message( websocket, {
+                    "type": "error",
+                    "error": "No se encontró la conexión del gimnasio"
+                } )
 
-                if not gym_websocket:
-                    await websocket_service.send_message( websocket, {
-                        "type": "error",
-                        "error": "No se encontró la conexión del gimnasio"
-                    } )
-
-                    continue
+                continue
 
             try:
                 message_data = json.loads( data )
@@ -66,7 +63,6 @@ async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str, session: Se
     await websocket_service.connect( websocket, None, gym_id )
 
     try:
-        user_websocket = None
         user = None
         last_index = 0
         user_id = None
@@ -76,7 +72,7 @@ async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str, session: Se
 
             print( data )
             
-            if user_id and not user_websocket:
+            if user_id:
                 user_websocket = await websocket_service.get_user_connection( user_id )
 
                 if not user_websocket:
@@ -259,7 +255,7 @@ async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str, session: Se
                     } )
 
                 elif type == "capture_quality_bad" or type == "capture_success"  or type == "enrollment_started" or type == "first_finger_enrollment_failed"  or type == "second_finger_enrollment_failed" or type == "first_finger_enrolled" or type == "conversion_failed" or type == "user_not_found" or type == "user_found" or type == "finger_captured":
-                    await websocket_service.send_message( user_websocket, data )
+                    await websocket_service.send_message( user_websocket, message_data )
             except json.JSONDecodeError as e:
                 await websocket_service.send_message( websocket, {
                     "type": "error",
