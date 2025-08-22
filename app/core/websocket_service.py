@@ -130,24 +130,6 @@ class WebSocketService:
                 "timestamp": datetime.now().isoformat()
             }) 
     
-    async def store_fingerprint_on_user( 
-        self,
-        user: User,
-        finger: int,
-        fingerprint: bytes,
-        session: Session 
-    ):
-        if finger == 1:
-            user.fingerprint1 = fingerprint
-        else:
-            user.fingerprint2 = fingerprint
-
-        user.updated_at = datetime.now( pytz.timezone('America/Bogota') )
-        
-        session.add( user )
-        session.commit()
-        session.refresh( user )
-        
     
 # Global WebSocket service instance
 websocket_service = WebSocketService()

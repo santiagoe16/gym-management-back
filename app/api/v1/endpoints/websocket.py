@@ -3,6 +3,7 @@ import json
 from datetime import datetime
 import base64
 
+import pytz
 from sqlmodel import Session, select
 from app.core.database import get_session
 from app.core.methods import get_user_by_email
@@ -135,7 +136,7 @@ async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str, session: Se
                     if await websocket_service.check_user_connection( websocket, user_websocket ):
                         continue
 
-                    user_id = message_data.get( "user_id" )
+                    user_id = message_data.get( "id" )
 
                     user = session.exec( select( User ).where( User.id == user_id ) ).first()
 
@@ -156,7 +157,7 @@ async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str, session: Se
                         websocket, 
                         { 
                             "type": "start_enrollment",
-                            "user_id": user_id,
+                            "id": user.id,
                             "full_name": user.full_name,
                             "email": user.email
                         } 
@@ -208,17 +209,9 @@ async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str, session: Se
                             "error": f"Error al almacenar huella digital: { str( e ) }"
                         })
 
-                elif type == "finger_captured":
-                    if await websocket_service.check_user_connection( websocket, user_websocket ):
-                        continue
-
-                    await websocket_service.send_message( user_websocket, message_data )
-
                 elif type == "download_templates":
                     if await websocket_service.check_user_connection( websocket, user_websocket ):
                         continue
-
-                    print( "last index", last_index )
 
                     users = session.exec( 
                         select( User ).where( User.gym_id == user.gym_id, User.role == UserRole.USER )
@@ -247,30 +240,75 @@ async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str, session: Se
 
                     last_index += len( users ) + 1
 
-                    print( "next last index", last_index )
-
                     await websocket_service.send_message( websocket, {
                         "type": "template_data_set",
                         "data": users_data
                     } )
-
-                elif type == "user_found":
-                    if await websocket_service.check_user_connection( websocket, user_websocket ):
-                        continue
-
-                    await websocket_service.send_message( user_websocket, message_data )
-            
-                elif type == "user_not_found":
-                    if await websocket_service.check_user_connection( websocket, user_websocket ):
-                        continue
-
-                    await websocket_service.send_message( user_websocket, message_data )
-            
+                    
                 elif type == "enrollment_completed":
                     if await websocket_service.check_user_connection( websocket, user_websocket ):
                         continue
 
-                    await websocket_service.send_message( user_websocket, message_data )
+                    fingerprint_data = message_data.get( "fingerprint1" )
+                    fingerprint_data2 = message_data.get( "fingerprint2" )
+                    
+                    if not fingerprint_data:
+                        await websocket_service.send_message( websocket, {
+                            "type": "enrollment_error",
+                            "error": "Huella digital 1 faltante"
+                        })
+
+                        await websocket_service.send_message( user_websocket, {
+                            "type": "enrollment_error",
+                            "error": "Huella digital 1 faltante"
+                        })
+
+                        continue
+
+                    if not fingerprint_data2:
+                        await websocket_service.send_message( websocket, {
+                            "type": "enrollment_error",
+                            "error": "Huella digital 2 faltante"
+                        })
+
+                        await websocket_service.send_message( user_websocket, {
+                            "type": "enrollment_error",
+                            "error": "Huella digital 2 faltante"
+                        })
+
+                        continue
+                        
+                    # Decode base64 fingerprint data
+                    fingerprint_bytes = base64.b64decode( fingerprint_data )
+                    
+                    # Encrypt the fingerprint data
+                    encrypted_fingerprint = await encryption_service.encrypt_byte_array( fingerprint_bytes )
+
+                    user.fingerprint1 = encrypted_fingerprint
+
+                    fingerprint_bytes = base64.b64decode( fingerprint_data2 )
+
+                    encrypted_fingerprint = await encryption_service.encrypt_byte_array( fingerprint_bytes )
+
+                    user.fingerprint2 = encrypted_fingerprint
+
+                    user.updated_at = datetime.now( pytz.timezone('America/Bogota') )
+
+                    session.add( user )
+                    session.commit()
+                    session.refresh( user )
+
+                    await websocket_service.send_message( user_websocket, {
+                        "type": "enrollment_completed",
+                        "message": "Huella digital almacenada exitosamente"
+                    } )
+
+                    
+                elif type == "capture_quality_bad" or type == "first_finger_enrollment_failed" or type == "first_finger_enrolled" or type == "conversion_failed" or type == "user_not_found" or type == "user_found" or type == "finger_captured":
+                    if await websocket_service.check_user_connection( websocket, user_websocket ):
+                        continue
+
+                    await websocket_service.send_message( user_websocket, data )
             except json.JSONDecodeError as e:
                 await websocket_service.send_message( websocket, {
                     "type": "error",
