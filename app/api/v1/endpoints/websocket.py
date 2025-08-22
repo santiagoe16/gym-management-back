@@ -88,7 +88,7 @@ async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str, session: Se
                 if type == "login":
                     login_data = message_data.get( "login_data" )
 
-                    user = await get_user_by_email( session, login_data[ "email" ] )
+                    user = get_user_by_email( session, login_data[ "email" ] )
                     
                     if user.role == UserRole.USER:
                         await websocket_service.send_message( websocket, {
