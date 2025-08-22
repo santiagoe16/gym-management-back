@@ -20,13 +20,13 @@ class EncryptionService:
         return base64.urlsafe_b64encode( kdf.derive( self.secret_key.encode() ) )
     
     async def encrypt_byte_array( self, data: bytes ) -> bytes:
-        key = self.generate_encryption_key()
+        key = await self.generate_encryption_key()
         f   = Fernet( key )
 
         return f.encrypt( data )
     
     async def decrypt_byte_array( self, encrypted_data: bytes ) -> bytes:
-        key = self.generate_encryption_key()
+        key = await self.generate_encryption_key()
         f   = Fernet( key )
 
         return f.decrypt( encrypted_data )
