@@ -258,14 +258,7 @@ async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str, session: Se
                         "message": "Huella digital almacenada exitosamente"
                     } )
 
-                elif type == "user_found":
-                    user_data = message_data.get( "user" )
-
-                    await websocket_service.send_message( user_websocket, {
-                        "type": "user_found",
-                        "document_id": user_data.get( "document_id" )
-                    } )
-                elif type == "capture_quality_bad" or type == "capture_success"  or type == "enrollment_started" or type == "first_finger_enrollment_failed"  or type == "second_finger_enrollment_failed" or type == "first_finger_enrolled" or type == "conversion_failed" or type == "user_not_found" or type == "finger_captured":
+                elif type == "capture_quality_bad" or type == "capture_success"  or type == "enrollment_started" or type == "first_finger_enrollment_failed"  or type == "second_finger_enrollment_failed" or type == "first_finger_enrolled" or type == "conversion_failed" or type == "user_not_found" or type == "user_found" or type == "finger_captured":
                     await websocket_service.send_message( user_websocket, data )
             except json.JSONDecodeError as e:
                 await websocket_service.send_message( websocket, {
