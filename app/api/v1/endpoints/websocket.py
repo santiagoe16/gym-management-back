@@ -45,7 +45,12 @@ async def websocket_user_endpoint( websocket: WebSocket, user_id: str, gym_id: s
                 type = message_data.get( "type" )
 
                 if type == "user":
-                    await websocket_service.send_message( gym_websocket, data )
+                    await websocket_service.send_message( 
+                        gym_websocket, {
+                            "type": "user",
+                            "id": message_data.get( "id" )
+                        } 
+                    )
             except json.JSONDecodeError as e:
                 await websocket_service.send_message( websocket, {
                     "type": "error",
