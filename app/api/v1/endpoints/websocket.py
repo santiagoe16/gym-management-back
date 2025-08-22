@@ -159,6 +159,7 @@ async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str, session: Se
                         { 
                             "type": "start_enrollment",
                             "id": user.id,
+                            "document_id": user.document_id,
                             "full_name": user.full_name,
                             "email": user.email
                         } 
