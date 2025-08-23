@@ -59,11 +59,10 @@ async def websocket_user_endpoint( websocket: WebSocket, user_id: str, gym_id: s
 
 # WebSocket with user authentication
 @router.websocket( "/gym/{gym_id}" )
-async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str, session: Session = Depends( get_session ) ):
+async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str ):
     await websocket_service.connect( websocket, None, gym_id )
 
     try:
-        user = None
         last_index = 0
         user_id = None
 
@@ -89,6 +88,8 @@ async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str, session: Se
                 type = message_data.get( "type" )
 
                 if type == "login":
+                    session = get_session()
+
                     login_data = message_data.get( "login_data" )
 
                     user = get_user_by_email( session, login_data[ "email" ] )
@@ -133,6 +134,7 @@ async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str, session: Se
                     await websocket_service.send_message( user_websocket, { "type": "fingerprint_connected" } )
            
                 elif type == "user":
+                    session = get_session()
                     id = message_data.get( "id" )
 
                     user = session.exec( select( User ).where( User.id == id ) ).first()
@@ -169,6 +171,8 @@ async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str, session: Se
                     break
 
                 elif type == "download_templates":
+                    session = get_session()
+                    
                     users = session.exec( 
                         select( User ).where( User.gym_id == user.gym_id, User.role == UserRole.USER )
                         .offset( last_index )
