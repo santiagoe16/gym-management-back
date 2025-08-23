@@ -148,6 +148,8 @@ async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str, session: Se
                             "error": "Usuario no encontrado"
                         } )
 
+                        continue
+
                     await websocket_service.send_message( user_websocket, { "type": "user_established" } )
 
                     await websocket_service.send_message( 
