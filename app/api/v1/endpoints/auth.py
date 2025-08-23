@@ -9,7 +9,7 @@ from app.core.methods import get_user_by_email
 
 router = APIRouter()
 
-@router.post("/login", response_model=Token)
+@router.post( "/login", response_model = Token )
 def login( login_data: LoginRequest, session: Session = Depends( get_session ) ):
     user = get_user_by_email( session, login_data.email )
     

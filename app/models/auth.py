@@ -1,12 +1,12 @@
 from enum import Enum
 from sqlmodel import SQLModel
 from typing import Optional
-from app.models.user import UserBase
+from app.models.user import User
 
 class Token(SQLModel):
     access_token: str
     token_type: str = "bearer"
-    user: UserBase
+    user: User
 
 class TokenData(SQLModel):
     email: Optional[str] = None
