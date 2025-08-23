@@ -5,7 +5,7 @@ import base64
 
 import pytz
 from sqlmodel import Session, select
-from app.core.database import get_session
+from app.core.database import get_normal_session
 from app.core.methods import get_user_by_email
 from app.core.security import verify_password
 from app.core.websocket_service import websocket_service
@@ -69,8 +69,6 @@ async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str ):
         while True:
             data = await websocket.receive_text()
 
-            print( data )
-            
             if user_id:
                 user_websocket = await websocket_service.get_user_connection( user_id )
 
@@ -88,7 +86,7 @@ async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str ):
                 type = message_data.get( "type" )
 
                 if type == "login":
-                    session = get_session()
+                    session = get_normal_session()
 
                     login_data = message_data.get( "login_data" )
 
@@ -134,7 +132,7 @@ async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str ):
                     await websocket_service.send_message( user_websocket, { "type": "fingerprint_connected" } )
            
                 elif type == "user":
-                    session = get_session()
+                    session = get_normal_session()
                     id = message_data.get( "id" )
 
                     user = session.exec( select( User ).where( User.id == id ) ).first()
@@ -171,7 +169,7 @@ async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str ):
                     break
 
                 elif type == "download_templates":
-                    session = get_session()
+                    session = get_normal_session()
                     
                     users = session.exec( 
                         select( User ).where( User.gym_id == user.gym_id, User.role == UserRole.USER )
