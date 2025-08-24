@@ -48,6 +48,76 @@ def read_attendance(
     attendance_records = session.exec(query.offset(skip).limit(limit)).all()
     return attendance_records
 
+@router.get( "/summary" )
+def get_user_attendance_summary(
+    start_date: Optional[date] = Query(None, description="Start date for summary"),
+    end_date: Optional[date] = Query(None, description="End date for summary"),
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_trainer_or_admin)
+):
+    """Get attendance summary for all users - Admin and Trainer access only"""
+    check_gym( session, current_user.gym_id )
+    
+    query = select( Attendance ).options( 
+        joinedload( Attendance.user ), 
+        joinedload( Attendance.gym ), 
+        joinedload( Attendance.recorded_by ) 
+    ).where( Attendance.gym_id == current_user.gym_id )
+    
+    # Filter by date range if specified
+    if start_date:
+        query = query.where( func.date( Attendance.check_in_time ) >= start_date )
+    if end_date:
+        query = query.where( func.date( Attendance.check_in_time ) <= end_date )
+    
+    attendance_records = session.exec( query ).all()
+    
+    records = [ {
+        "duration": None,
+        "total_hours": 0,
+        "user_id": 0,
+        "user_name": "",
+        "total_visits": 0,
+        "total_hours": 0,
+        "average_session_hours": 0,
+        "period": {
+            "start_date": start_date,
+            "end_date": end_date
+        },
+        "active_plan": None
+    } ]
+
+    for record in attendance_records:
+        user_record = next( ( record_record for record_record in records if record_record[ "user_id" ] == record.user_id ), None )
+
+        if not user_record:
+            user_record = {
+                "duration": None,
+                "total_hours": 0,
+                "user_id": record.user_id,
+                "user_name": record.user.full_name,
+                "total_visits": 0,
+                "total_hours": 0,
+                "average_session_hours": 0,
+                "period": {
+                    "start_date": start_date,
+                    "end_date": end_date
+                },
+                "active_plan": None
+            }
+
+            records.append( user_record )
+
+        user_record[ "duration" ] = record.check_in_time - record.check_in_time
+        user_record[ "total_hours" ] += user_record[ "duration" ].total_seconds() / 3600
+        user_record[ "total_visits" ] += 1
+        user_record[ "average_session_hours" ] = round( user_record[ "total_hours" ] / user_record[ "total_visits" ], 2 )
+
+        if user_record[ "active_plan" ] is None:
+            user_record[ "active_plan" ] = get_last_plan( record.user )
+    
+    return records
+
 @router.get( "/user/{user_id}/summary" )
 def get_user_attendance_summary(
     user_id: int,

@@ -31,18 +31,18 @@ def read_products(
 
     return products
 
-@router.get("/active", response_model=List[ProductRead])
+@router.get( "/active", response_model = List[ ProductRead ] )
 def read_active_products(
-    session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_active_user)
+    session: Session = Depends( get_session ),
+    current_user: User = Depends( get_current_active_user )
 ):
     """Get all active products - Admin and Trainer access"""
-    query = select(Product).options(selectinload(Product.gym)).where(Product.is_active == True)
+    query = select( Product ).options( selectinload( Product.gym ) ).where( Product.is_active == True )
 
     if current_user.role == UserRole.TRAINER:
-        query = query.where(Product.gym_id == current_user.gym_id)
+        query = query.where( Product.gym_id == current_user.gym_id )
 
-    products = session.exec(query).all()
+    products = session.exec( query ).all()
 
     return products
 
