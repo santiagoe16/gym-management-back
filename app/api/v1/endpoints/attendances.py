@@ -52,6 +52,8 @@ def read_attendance(
 def get_user_attendance_summary(
     start_date: Optional[date] = Query(None, description="Start date for summary"),
     end_date: Optional[date] = Query(None, description="End date for summary"),
+    gym_id: Optional[int] = Query(None, description="Filter by gym ID"),
+    trainer_id: Optional[int] = Query(None, description="Filter by trainer ID"),
     session: Session = Depends(get_session),
     current_user: User = Depends(require_trainer_or_admin)
 ):
@@ -69,6 +71,12 @@ def get_user_attendance_summary(
         query = query.where( func.date( Attendance.check_in_time ) >= start_date )
     if end_date:
         query = query.where( func.date( Attendance.check_in_time ) <= end_date )
+    
+    if trainer_id:
+        query = query.where( Attendance.recorded_by_id == trainer_id )
+    
+    if gym_id:
+        query = query.where( Attendance.gym_id == gym_id )
     
     attendance_records = session.exec( query ).all()
     
