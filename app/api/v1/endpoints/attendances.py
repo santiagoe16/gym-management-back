@@ -12,119 +12,80 @@ from app.models.plan import PlanRole
 from datetime import datetime, date
 from app.models.read_models import AttendanceRead
 from app.core.methods import check_gym, check_user_by_id, get_last_plan
+from datetime import datetime, timezone
+
 import pytz
 
 router = APIRouter()
 
-@router.get("/", response_model=List[AttendanceRead])
+@router.get("/", response_model = List[ AttendanceRead ] )
 def read_attendance(
     skip: int = 0,
     limit: int = 100,
     user_id: Optional[int] = Query(None, description="Filter by user ID"),
     gym_id: Optional[int] = Query(None, description="Filter by gym ID"),
-    attendance_date: Optional[date] = Query(None, description="Filter by attendance date"),
+    trainer_id: Optional[int] = Query(None, description="Filter by trainer ID"),
+    start_date: Optional[date] = Query(None, description="Start date for summary"),
+    end_date: Optional[date] = Query(None, description="End date for summary"),
     session: Session = Depends(get_session),
     current_user: User = Depends(require_trainer_or_admin)
 ):
     """Get all attendance records - Admin and Trainer access only"""
     query = select( Attendance ).options( joinedload( Attendance.user ), joinedload( Attendance.recorded_by ), joinedload( Attendance.gym ) )
     
-    # Filter by user if specified
     if user_id:
-        query = query.where(Attendance.user_id == user_id)
-    
-    # Filter by date if specified
-    if attendance_date:
-        query = query.where(func.date(Attendance.check_in_time) == attendance_date)
-    
-    # Filter by gym if specified
-    if gym_id:
-        query = query.where(Attendance.gym_id == gym_id)
-    
-    # If trainer, only show attendance from their gym
-    if current_user.role == UserRole.TRAINER:
-        query = query.where(Attendance.gym_id == current_user.gym_id)
-    
-    attendance_records = session.exec(query.offset(skip).limit(limit)).all()
-    return attendance_records
-
-@router.get( "/summary" )
-def get_user_attendance_summary(
-    start_date: Optional[date] = Query(None, description="Start date for summary"),
-    end_date: Optional[date] = Query(None, description="End date for summary"),
-    gym_id: Optional[int] = Query(None, description="Filter by gym ID"),
-    trainer_id: Optional[int] = Query(None, description="Filter by trainer ID"),
-    session: Session = Depends(get_session),
-    current_user: User = Depends(require_trainer_or_admin)
-):
-    """Get attendance summary for all users - Admin and Trainer access only"""
-    check_gym( session, current_user.gym_id )
-    
-    query = select( Attendance ).options( 
-        joinedload( Attendance.user ), 
-        joinedload( Attendance.gym ), 
-        joinedload( Attendance.recorded_by ) 
-    ).where( Attendance.gym_id == current_user.gym_id )
-    
-    # Filter by date range if specified
-    if start_date:
-        query = query.where( func.date( Attendance.check_in_time ) >= start_date )
-    if end_date:
-        query = query.where( func.date( Attendance.check_in_time ) <= end_date )
-    
-    if trainer_id:
-        query = query.where( Attendance.recorded_by_id == trainer_id )
+        query = query.where( Attendance.user_id == user_id )
     
     if gym_id:
         query = query.where( Attendance.gym_id == gym_id )
     
-    attendance_records = session.exec( query ).all()
+    if current_user.role == UserRole.TRAINER:
+        query = query.where( Attendance.gym_id == current_user.gym_id )
     
-    records = [ {
-        "duration": None,
-        "total_hours": 0,
-        "user_id": 0,
-        "user_name": "",
-        "total_visits": 0,
-        "total_hours": 0,
-        "average_session_hours": 0,
-        "period": {
-            "start_date": start_date,
-            "end_date": end_date
-        },
-        "active_plan": None
-    } ]
+    if trainer_id:
+        query = query.where( Attendance.recorded_by_id == trainer_id )
+    
+    if start_date:
+        query = query.where( func.date( Attendance.check_in_time ) >= start_date )
+    
+    if end_date:
+        query = query.where( func.date( Attendance.check_in_time ) <= end_date )
+    
+    attendance_records = session.exec( query.offset( skip ).limit( limit ) ).all()
+
+    result = []
 
     for record in attendance_records:
-        user_record = next( ( record_record for record_record in records if record_record[ "user_id" ] == record.user_id ), None )
+        attendance = AttendanceRead.model_validate( record )
 
-        if not user_record:
-            user_record = {
-                "duration": None,
-                "total_hours": 0,
-                "user_id": record.user_id,
-                "user_name": record.user.full_name,
-                "total_visits": 0,
-                "total_hours": 0,
-                "average_session_hours": 0,
-                "period": {
-                    "start_date": start_date,
-                    "end_date": end_date
-                },
-                "active_plan": None
-            }
+        user = session.exec( select( User ).options( joinedload( User.user_plans ).selectinload( UserPlan.plan ) ).where( User.id == record.user_id ) ).first()
+        
+        if user.user_plans:
+            current_time = attendance.check_in_time
 
-            records.append( user_record )
+            if current_time.tzinfo is None:
+                current_time = current_time.replace( tzinfo = pytz.timezone( 'America/Bogota' ) )
 
-        user_record[ "duration" ] = record.check_in_time - record.check_in_time
-        user_record[ "total_hours" ] += user_record[ "duration" ].total_seconds() / 3600
-        user_record[ "total_visits" ] += 1
-        user_record[ "average_session_hours" ] = round( user_record[ "total_hours" ] / user_record[ "total_visits" ], 2 )
+            valid_plans = []
+            
+            for up in user.user_plans:
+                if not up.is_active:
+                    continue
+                    
+                expires_at = up.expires_at
 
-        if user_record[ "active_plan" ] is None:
-            user_record[ "active_plan" ] = get_last_plan( record.user )
-    
-    return records
+                if expires_at.tzinfo is None:
+                    expires_at = expires_at.replace( tzinfo = pytz.timezone( 'America/Bogota' ) )
+                
+                if expires_at > current_time:
+                    valid_plans.append( up )
+            
+            if valid_plans:
+                attendance.user.active_plan = max( valid_plans, key = lambda up: up.purchased_at )
+
+        result.append( attendance )
+
+    return result
 
 @router.get( "/user/{user_id}/summary" )
 def get_user_attendance_summary(
@@ -207,6 +168,7 @@ def get_daily_attendance(
         user = session.exec( select( User ).options( joinedload( User.user_plans ).selectinload( UserPlan.plan ) ).where( User.id == record.user_id ) ).first()
 
         attendance.user.active_plan = get_last_plan( user )
+
         result.append( attendance )
 
     return result
@@ -220,12 +182,14 @@ def create_attendance(
 ):
     """Create a new attendance record - Admin and Trainer access only"""
     # Get the user
-    user = session.exec( select( User ).options( joinedload( User.user_plans ).selectinload( UserPlan.plan ) ).where( User.document_id == document_id ) ).first()
+    user = session.exec( 
+        select( User ).options( joinedload( User.user_plans ).selectinload( UserPlan.plan ) ).where( User.document_id == document_id )
+    ).first()
 
     if not user:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Usuario no encontrado"
+            status_code = status.HTTP_404_NOT_FOUND,
+            detail = "Usuario no encontrado"
         )
     
     today = datetime.now(pytz.timezone('America/Bogota')).date()

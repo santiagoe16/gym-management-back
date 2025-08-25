@@ -79,10 +79,7 @@ def create_product(
     existing_product = session.exec( select( Product ).where( Product.name == product.name, Product.gym_id == product.gym_id ) ).first()
 
     if existing_product:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Ya existe un producto con este nombre"
-        )
+        return existing_product
     
     db_product = Product.model_validate(product)
     

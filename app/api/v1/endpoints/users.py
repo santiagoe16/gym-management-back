@@ -36,16 +36,22 @@ def create_admin_or_trainer(
         )
     
     check_gym( session, user.gym_id )
+
     check_user_by_email( session, user.email )
-    check_user_by_document_id( session, user.document_id )
     
-    hashed_password = get_password_hash(user.password)
-    db_user = User.model_validate(user)
+    db_user = session.exec( select( User ).where( User.document_id == user.document_id ) ).first()
+
+    if db_user:
+        return db_user
+
+    hashed_password = get_password_hash( user.password )
+    db_user = User.model_validate( user )
     db_user.hashed_password = hashed_password
     
     session.add(db_user)
     session.commit()
     session.refresh(db_user)
+
     return db_user
 
 @router.post("/with-plan", response_model=UserRead)
@@ -64,7 +70,11 @@ def create_user_with_plan(
         )
     
     check_user_by_email( session, user.email )
-    check_user_by_document_id( session, user.document_id )
+
+    db_user = session.exec( select( User ).where( User.document_id == user.document_id ) ).first()
+
+    if db_user:
+        return db_user
     
     # Verify plan exists and is active
     # For admins, allow plans from any gym; for trainers, only allow plans from their gym
@@ -123,7 +133,7 @@ def read_users(
     query = select( User ).options(
         selectinload( User.gym ),
         selectinload( User.user_plans ).selectinload( UserPlan.plan )
-    )
+    ).where( User.is_active )
     
     if gym_id:
         query = query.where( User.gym_id == gym_id )
@@ -267,7 +277,7 @@ def read_trainers(
     """Get all trainers - Admin and Trainer access only"""
     query = select(User).where(User.role == UserRole.TRAINER).options(
         selectinload(User.gym)
-    )
+    ).where( User.is_active )
     
     # Filter by gym if specified
     if gym_id:

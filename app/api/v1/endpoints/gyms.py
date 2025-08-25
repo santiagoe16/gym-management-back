@@ -36,13 +36,10 @@ def create_gym(
 ):
     """Create a new gym - Admin access only"""
     # Check if gym already exists
-    existing_gym = session.exec(select(Gym).where(Gym.name == gym.name)).first()
+    existing_gym = session.exec( select( Gym ).where( Gym.name == gym.name ) ).first()
 
     if existing_gym:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Ya existe un gimnasio con este nombre"
-        )
+        return existing_gym
     
     # Create new gym
     db_gym = Gym.model_validate(gym)

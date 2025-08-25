@@ -1,4 +1,5 @@
 
+import pytz
 from sqlmodel import Session, select
 from app.models.user import User, UserRole
 from app.models.gym import Gym
@@ -13,7 +14,7 @@ def get_last_plan( user: User ) -> UserPlanRead:
         return None
     
     # Get active plans that haven't expired
-    current_time = datetime.now(timezone.utc)
+    current_time = datetime.now( pytz.timezone( 'America/Bogota' ) )
     valid_plans = []
     
     for up in user.user_plans:
@@ -24,10 +25,10 @@ def get_last_plan( user: User ) -> UserPlanRead:
         expires_at = up.expires_at
         if expires_at.tzinfo is None:
             # If timezone-naive, assume UTC
-            expires_at = expires_at.replace(tzinfo=timezone.utc)
+            expires_at = expires_at.replace( tzinfo = pytz.timezone( 'America/Bogota' ) )
         
         if expires_at > current_time:
-            valid_plans.append(up)
+            valid_plans.append( up )
     
     if not valid_plans:
         return None
@@ -38,7 +39,7 @@ def get_last_plan( user: User ) -> UserPlanRead:
     return latest_plan
 
 def check_gym( session: Session, gym_id: int ):
-    gym = session.exec(select(Gym).where(Gym.id == gym_id, Gym.is_active == True)).first()
+    gym = session.exec( select( Gym ).where( Gym.id == gym_id ) ).first()
 
     if not gym:
         raise HTTPException(
