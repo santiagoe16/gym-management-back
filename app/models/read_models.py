@@ -42,6 +42,7 @@ class UserRead(UserBase):
     active_plan: Union["UserPlanRead", None] = Field(default=None)
     schedule_start: Optional[str] = None
     schedule_end: Optional[str] = None
+    has_fingerprint: Optional[bool] = False
 
 class AttendanceRead(AttendanceBase):
     id: int

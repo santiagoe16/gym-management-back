@@ -43,6 +43,12 @@ def create_admin_or_trainer(
     db_user = session.exec( select( User ).where( User.document_id == user.document_id ) ).first()
 
     if db_user:
+        if db_user.fingerprint1 or db_user.fingerprint2:
+            user = UserRead.model_validate(db_user)
+            user.has_fingerprint = True
+
+            return user
+
         return db_user
 
     hashed_password = get_password_hash( user.password )
@@ -76,6 +82,12 @@ def create_user_with_plan(
     db_user = session.exec( select( User ).where( User.document_id == user.document_id ) ).first()
 
     if db_user:
+        if db_user.fingerprint1 or db_user.fingerprint2:
+            user = UserRead.model_validate(db_user)
+            user.has_fingerprint = True
+
+            return user
+
         return db_user
     
     # Verify plan exists and is active
@@ -156,6 +168,9 @@ def read_users(
             created_by_user = session.exec( select( User ).where( User.id == user_data.active_plan.created_by_id ) ).first()
             user_data.active_plan.created_by = UserRead.model_validate(created_by_user) if created_by_user else None
 
+        if user.fingerprint1 or user.fingerprint2:
+            user_data.has_fingerprint = True
+
         user_list.append(user_data)
 
     return user_list
@@ -186,6 +201,10 @@ def search_user_by_document_id(
         raise HTTPException(status_code=404, detail="Usuario no encontrado con este número de documento")
     
     user_data = UserRead.model_validate(user)
+
+    if user.fingerprint1 or user.fingerprint2:
+        user_data.has_fingerprint = True
+
     last_plan = get_last_plan(user)
     user_data.active_plan = UserPlanRead.model_validate(last_plan) if last_plan else None
 
@@ -227,6 +246,9 @@ def search_users_by_phone(
         last_plan = get_last_plan(user)
         user_data.active_plan = UserPlanRead.model_validate(last_plan) if last_plan else None
 
+        if user.fingerprint1 or user.fingerprint2:
+            user_data.has_fingerprint = True
+
         if user_data.active_plan is not None:
             created_by_user = session.exec( select( User ).where( User.id == user_data.active_plan.created_by_id ) ).first()
             user_data.active_plan.created_by = UserBase.model_validate(created_by_user) if created_by_user else None
@@ -260,6 +282,9 @@ def read_user(
             )
     
     user_data = UserRead.model_validate(user)
+
+    if user.fingerprint1 or user.fingerprint2:
+        user_data.has_fingerprint = True
 
     last_plan = get_last_plan(user)
     user_data.active_plan = UserPlanRead.model_validate(last_plan) if last_plan else None
@@ -314,6 +339,10 @@ def read_regular_users(
 
     for user in users:
         user_data = UserRead.model_validate(user)
+
+        if user.fingerprint1 or user.fingerprint2:
+            user_data.has_fingerprint = True
+
         last_plan = get_last_plan(user)
         user_data.active_plan = UserPlanRead.model_validate(last_plan) if last_plan else None
         user_list.append(user_data)
@@ -414,6 +443,10 @@ def update_user(
         session.refresh(db_user)
     
     user_read = UserRead.model_validate(db_user)
+
+    if db_user.fingerprint1 or db_user.fingerprint2:
+        user_read.has_fingerprint = True
+
     last_plan = get_last_plan(db_user)
     user_read.active_plan = UserPlanRead.model_validate(last_plan) if last_plan else None
 
