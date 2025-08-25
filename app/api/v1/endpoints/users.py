@@ -14,7 +14,7 @@ from app.models.measurement import Measurement
 from app.models.attendance import Attendance
 from datetime import datetime, timedelta
 from app.models.read_models import UserPlanRead, UserRead, UserBase
-from app.core.methods import get_last_plan, check_gym, check_user_by_document_id, check_user_by_email
+from app.core.methods import get_last_plan, check_gym, check_user_by_email, check_user_by_phone_number
 
 import pytz
 
@@ -38,6 +38,7 @@ def create_admin_or_trainer(
     check_gym( session, user.gym_id )
 
     check_user_by_email( session, user.email )
+    check_user_by_phone_number( session, user.phone_number )
     
     db_user = session.exec( select( User ).where( User.document_id == user.document_id ) ).first()
 
@@ -70,6 +71,7 @@ def create_user_with_plan(
         )
     
     check_user_by_email( session, user.email )
+    check_user_by_phone_number( session, user.phone_number )
 
     db_user = session.exec( select( User ).where( User.document_id == user.document_id ) ).first()
 

@@ -90,6 +90,15 @@ def check_user_by_email( session: Session, email: str ):
             detail="El correo electrónico ya está registrado"
         )
 
+def check_user_by_phone_number( session: Session, phone_number: str ):
+    user = session.exec( select( User ).where( User.phone_number == phone_number ) ).first()
+
+    if user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="El número de teléfono ya está registrado"
+        )
+
 def check_user_by_id_and_gym( session: Session, user_id: int, gym_id: int ):
     user = session.exec(select(User).where(User.id == user_id, User.gym_id == gym_id)).first()
 
