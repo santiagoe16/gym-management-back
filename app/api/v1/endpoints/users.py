@@ -37,9 +37,6 @@ def create_admin_or_trainer(
     
     check_gym( session, user.gym_id )
 
-    check_user_by_email( session, user.email )
-    check_user_by_phone_number( session, user.phone_number )
-    
     db_user = session.exec( select( User ).where( User.document_id == user.document_id ) ).first()
 
     if db_user:
@@ -51,6 +48,9 @@ def create_admin_or_trainer(
 
         return db_user
 
+    check_user_by_email( session, user.email )
+    check_user_by_phone_number( session, user.phone_number )
+    
     hashed_password = get_password_hash( user.password )
     db_user = User.model_validate( user )
     db_user.hashed_password = hashed_password
@@ -76,9 +76,6 @@ def create_user_with_plan(
             detail="Only regular users can be created with plans"
         )
     
-    check_user_by_email( session, user.email )
-    check_user_by_phone_number( session, user.phone_number )
-
     db_user = session.exec( select( User ).where( User.document_id == user.document_id ) ).first()
 
     if db_user:
@@ -90,6 +87,9 @@ def create_user_with_plan(
 
         return db_user
     
+    check_user_by_email( session, user.email )
+    check_user_by_phone_number( session, user.phone_number )
+
     # Verify plan exists and is active
     # For admins, allow plans from any gym; for trainers, only allow plans from their gym
     if current_user.role == UserRole.ADMIN:
@@ -134,6 +134,7 @@ def create_user_with_plan(
     user_read.active_plan = UserPlanRead.model_validate(last_plan) if last_plan else None
 
     return user_read
+
 
 @router.get("/", response_model=List[UserRead])
 def read_users(
@@ -324,10 +325,10 @@ def read_regular_users(
     current_user: User = Depends(require_trainer_or_admin)
 ):
     """Get all regular users - Admin and Trainer access only"""
-    query = select(User).where(User.role == UserRole.USER).options(
-        selectinload(User.gym),
-        selectinload(User.user_plans).selectinload(UserPlan.plan)
-    )
+    query = select( User ).where( User.role == UserRole.USER ).options(
+        selectinload( User.gym ),
+        selectinload( User.user_plans ).selectinload( UserPlan.plan )
+    ).where( User.is_active )
     
     # Filter by gym if specified
     if gym_id:
@@ -381,33 +382,33 @@ def update_user(
     if user_update.email and user_update.email != db_user.email:
         existing_user = session.exec( select( User ).where( User.email == user_update.email ) ).first()
 
-        if existing_user:
+        if existing_user and existing_user.id != db_user.id:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="El correo electrónico ya está registrado"
+                status_code = status.HTTP_400_BAD_REQUEST,
+                detail = "El correo electrónico ya está registrado"
             )
     
     if user_update.document_id and user_update.document_id != db_user.document_id:
-        existing_doc = session.exec(select(User).where(User.document_id == user_update.document_id)).first()
+        existing_doc = session.exec( select( User ).where( User.document_id == user_update.document_id ) ).first()
 
-        if existing_doc:
+        if existing_doc and existing_doc.id != db_user.id:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="El número de documento ya está registrado"
+                status_code = status.HTTP_400_BAD_REQUEST,
+                detail = "El número de documento ya está registrado"
             )
         
     user_data = user_update.model_dump( exclude_unset = True )
 
     # Handle plan_id separately since it's not a field in the User model
-    plan_id = user_data.pop('plan_id', None)
+    plan_id = user_data.pop( 'plan_id', None )
 
     for key, value in user_data.items():
-        setattr(db_user, key, value)
+        setattr( db_user, key, value )
     
     db_user.updated_at = datetime.now(pytz.timezone('America/Bogota'))
-    session.add(db_user)
+    session.add( db_user )
     session.commit()
-    session.refresh(db_user)
+    session.refresh( db_user )
     
     if plan_id:
         # For admins, allow plans from any gym; for trainers, only allow plans from their gym
