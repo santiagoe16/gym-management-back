@@ -20,12 +20,10 @@ def read_gyms(
     return gyms
 
 @router.get("/active", response_model=List[GymRead])
-def read_active_gyms(
-    session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_active_user)
-):
+def read_active_gyms( session: Session = Depends(get_session) ):
     """Get all active gyms - All authenticated users can view"""
-    gyms = session.exec(select(Gym).where(Gym.is_active == True)).all()
+    gyms = session.exec( select( Gym ).where( Gym.is_active == True ) ).all()
+
     return gyms
 
 @router.post("/", response_model=GymRead)
