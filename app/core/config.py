@@ -6,16 +6,9 @@ class Settings(BaseSettings):
     VERSION: str = "1.0.0"
     API_V1_STR: str = "/api/v1"
     
-    # Database
-    DB_USER: str
-    DB_PASSWORD: str
-    DB_HOST: str
-    DB_PORT: str
-    DB_NAME: str
-    
     @property
     def DATABASE_URL(self) -> str:
-        return f"mysql+pymysql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
+        return f"mysql+pymysql://root:EzxdwzNmULGjyKuvDosQqPqDfjDHUidq@interchange.proxy.rlwy.net:50449/railway"
     
     # JWT
     SECRET_KEY: str

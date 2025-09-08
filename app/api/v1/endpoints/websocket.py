@@ -5,9 +5,10 @@ import base64
 
 import pytz
 from sqlmodel import Session, select
+from app.core.database import engine
 from app.core.database import get_normal_session
 from app.core.methods import get_user_by_email
-from app.core.security import verify_password
+from app.core.security import verify_password, verify_token
 from app.core.websocket_service import websocket_service
 from app.core.encryption_service import encryption_service
 from app.models.enums import UserRole
@@ -15,10 +16,43 @@ from app.models.user import User
 
 router = APIRouter()
 
-# WebSocket with user authentication
-@router.websocket( "/user/{user_id}/{gym_id}" )
-async def websocket_user_endpoint( websocket: WebSocket, user_id: str, gym_id: str ):
-    await websocket_service.connect( websocket, user_id, None )
+def get_current_user( token: str ):
+    credentials_exception = HTTPException(
+        status_code = status.HTTP_401_UNAUTHORIZED,
+        detail ="No se pudieron validar las credenciales",
+        headers = {"WWW-Authenticate": "Bearer"},
+    )
+
+    email = verify_token( token )
+
+    if email is None:
+        raise credentials_exception
+    
+    with Session( engine ) as session:
+        user = session.exec( select( User ).where( User.email == email ) ).first()
+        
+        if user is None:
+            raise credentials_exception
+        
+        return user
+
+@router.websocket( "/user" )
+async def websocket_user_endpoint( websocket: WebSocket ):
+    headers = dict( websocket.headers )
+
+    token = headers.get( "token" )
+
+    if not token:
+        await websocket_service.send_message( websocket, {
+            "type": "error",
+            "error": "No se encontró el token"
+        } )
+
+        return
+
+    user = get_current_user( token )
+
+    await websocket_service.connect( websocket, user.id, None )
 
     try:
         while True:
@@ -26,7 +60,7 @@ async def websocket_user_endpoint( websocket: WebSocket, user_id: str, gym_id: s
 
             print( data )
 
-            gym_websocket = await websocket_service.get_gym_connection( gym_id )
+            gym_websocket = await websocket_service.get_gym_connection( user.gym_id )
 
             if not gym_websocket:
                 await websocket_service.send_message( websocket, {
@@ -61,10 +95,23 @@ async def websocket_user_endpoint( websocket: WebSocket, user_id: str, gym_id: s
     except WebSocketDisconnect:
         websocket_service.disconnect( websocket )
 
-# WebSocket with user authentication
-@router.websocket( "/gym/{gym_id}" )
-async def websocket_gym_endpoint( websocket: WebSocket, gym_id: str ):
-    await websocket_service.connect( websocket, None, gym_id )
+@router.websocket( "/gym" )
+async def websocket_gym_endpoint( websocket: WebSocket ):
+    headers = dict( websocket.headers )
+
+    token = headers.get( "token" )
+
+    if not token:
+        await websocket_service.send_message( websocket, {
+            "type": "error",
+            "error": "No se encontró el token"
+        } )
+
+        return
+
+    user = get_current_user( token )
+
+    await websocket_service.connect( websocket, None, user.gym_id )
 
     try:
         last_index = 0

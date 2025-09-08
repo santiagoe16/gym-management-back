@@ -14,7 +14,7 @@ engine = create_engine(
 )
 
 def create_db_and_tables():
-    SQLModel.metadata.create_all(engine)
+    SQLModel.metadata.create_all( engine )
 
 def get_normal_session():
     return Session( engine )
