@@ -1,5 +1,5 @@
 from logging.config import fileConfig
-from sqlalchemy import engine_from_config
+from sqlalchemy import create_engine, engine_from_config, text
 from sqlalchemy import pool
 from alembic import context
 import os
@@ -30,9 +30,31 @@ target_metadata = SQLModel.metadata
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
 
+def get_base_url():
+    return os.getenv("DB_URL")
+
 def get_url():
-    """Get database URL from environment variables"""
-    return f"mysql+pymysql://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}@{os.getenv('DB_HOST')}:{os.getenv('DB_PORT')}/{os.getenv('DB_NAME')}?charset=utf8mb4"
+	return f"{get_base_url()}/railway"
+
+def ensure_database_exists():
+	"""Create database if it doesn't exist"""
+	db_name = "gym"
+	base_url = get_base_url()
+	engine = create_engine(base_url)
+	
+	try:
+		with engine.connect() as connection:
+			# Check if database exists
+			result = connection.execute(text(f"SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = '{db_name}'"))
+			if not result.fetchone():
+				# Create database if it doesn't exist
+				connection.execute(text(f"CREATE DATABASE {db_name} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"))
+				connection.commit()
+				print(f"Database '{db_name}' created successfully")
+			else:
+				print(f"Database '{db_name}' already exists")
+	finally:
+		engine.dispose()
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
@@ -70,6 +92,7 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
+    ensure_database_exists()
     configuration = config.get_section(config.config_ini_section)
     configuration["sqlalchemy.url"] = get_url()
     
