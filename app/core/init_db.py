@@ -28,7 +28,7 @@ def init_db():
         admin = session.exec(select(User).where(User.email == settings.ADMIN_NAME)).first()
         if not admin:
             # Create default admin user
-            admin_user = User(
+            admin = User(
                 email=settings.ADMIN_NAME,
                 full_name="Administrador",
                 document_id="Admin",
@@ -38,11 +38,15 @@ def init_db():
                 hashed_password=get_password_hash(settings.ADMIN_PASSWORD),
                 is_active=True
             )
-
-            session.add(admin_user)
+        else:
+            admin.email = settings.ADMIN_NAME
+            admin.hashed_password = get_password_hash(settings.ADMIN_PASSWORD)
             
-            session.commit()
-            session.refresh(admin_user)
+        session.add(admin)
+        
+        session.commit()
+        session.refresh(admin)
+        
 
 if __name__ == "__main__":
     init_db() 
