@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     HOST: str = "0.0.0.0"
     PORT: int = 8000
     
+    ADMIN_NAME: str
+    ADMIN_PASSWORD: str
+    
     class Config:
         env_file = ".env"
         case_sensitive = True

@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1.api import api_router
 from app.api.v1.endpoints import websocket
+from app.core.init_db import init_db
 
 app = FastAPI(
     title="Gym Management API",
@@ -23,6 +24,10 @@ app.include_router(websocket.router)
 
 # Include API router
 app.include_router(api_router, prefix="/api/v1")
+
+@app.on_event("startapp")
+async def startapp():
+    init_db()
 
 @app.get("/")
 def read_root():
