@@ -25,7 +25,7 @@ app.include_router(websocket.router)
 # Include API router
 app.include_router(api_router, prefix="/api/v1")
 
-@app.on_event("startapp")
+@app.on_event("startup")
 async def startapp():
     init_db()
 
