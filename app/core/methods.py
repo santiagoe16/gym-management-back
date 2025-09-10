@@ -27,7 +27,7 @@ def get_last_plan( user: User ) -> UserPlanRead:
             # If timezone-naive, assume UTC
             expires_at = expires_at.replace( tzinfo = pytz.timezone( 'America/Bogota' ) )
         
-        if expires_at > current_time:
+        if expires_at.date() > current_time.date():
             valid_plans.append( up )
     
     if not valid_plans:
