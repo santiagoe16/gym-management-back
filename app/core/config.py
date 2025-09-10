@@ -6,9 +6,12 @@ class Settings(BaseSettings):
     VERSION: str = "1.0.0"
     API_V1_STR: str = "/api/v1"
     
+    # Database
+    DB_URL: str
+    
     @property
     def DATABASE_URL(self) -> str:
-        return f"mysql+pymysql://root:EzxdwzNmULGjyKuvDosQqPqDfjDHUidq@interchange.proxy.rlwy.net:50449/railway"
+        return self.DB_URL
     
     # JWT
     SECRET_KEY: str
@@ -20,8 +23,12 @@ class Settings(BaseSettings):
     HOST: str = "0.0.0.0"
     PORT: int = 8000
     
+    ADMIN_NAME: str
+    ADMIN_PASSWORD: str
+    
     class Config:
         env_file = ".env"
         case_sensitive = True
+        extra = "ignore"
 
 settings = Settings() 

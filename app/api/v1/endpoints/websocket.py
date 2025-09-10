@@ -36,11 +36,8 @@ def get_current_user( token: str ):
         
         return user
 
-@router.websocket( "/user" )
-async def websocket_user_endpoint( websocket: WebSocket ):
-    headers = dict( websocket.headers )
-
-    token = headers.get( "token" )
+@router.websocket( "/user/{token}" )
+async def websocket_user_endpoint( websocket: WebSocket, token: str ):
 
     if not token:
         await websocket_service.send_message( websocket, {
