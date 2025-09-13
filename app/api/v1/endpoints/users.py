@@ -424,38 +424,32 @@ def update_user(
 
         active_plan = get_last_plan( db_user )
 
-        if active_plan and active_plan.plan_id == plan.id:
-            raise HTTPException(
-                status_code = status.HTTP_400_BAD_REQUEST,
-                detail      = "El usuario ya tiene este plan activo"
+        if active_plan is None or active_plan.plan_id != plan.id:
+            expires_at = datetime.now( pytz.timezone( 'America/Bogota' ) ) + timedelta( days = plan.duration_days )
+            
+            user_plan = UserPlan(
+                user_id=db_user.id,
+                plan_id=plan.id,
+                purchased_price=plan.price,
+                expires_at=expires_at,
+                created_by_id=current_user.id,
+                payment_type=payment_type,
+                duration_days=plan.duration_days,
+                days=plan.days
             )
-        
-        expires_at = datetime.now( pytz.timezone( 'America/Bogota' ) ) + timedelta( days = plan.duration_days )
-        
-        user_plan = UserPlan(
-            user_id=db_user.id,
-            plan_id=plan.id,
-            purchased_price=plan.price,
-            expires_at=expires_at,
-            created_by_id=current_user.id,
-            payment_type=payment_type,
-            duration_days=plan.duration_days,
-            days=plan.days
-        )
 
-        session.add(user_plan)
-        session.commit()
+            session.add( user_plan )
+            session.commit()
         
-        # Refresh the user and reload with relationships
-        session.refresh(db_user)
+            session.refresh( db_user )
     
-    user_read = UserRead.model_validate(db_user)
+    user_read = UserRead.model_validate( db_user )
 
     if db_user.fingerprint1 or db_user.fingerprint2:
         user_read.has_fingerprint = True
 
-    last_plan = get_last_plan(db_user)
-    user_read.active_plan = UserPlanRead.model_validate(last_plan) if last_plan else None
+    last_plan = get_last_plan( db_user )
+    user_read.active_plan = UserPlanRead.model_validate( last_plan ) if last_plan else None
 
     return user_read
 
