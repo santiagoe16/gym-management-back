@@ -411,7 +411,6 @@ def update_user(
     session.refresh( db_user )
     
     if plan_id:
-        # For admins, allow plans from any gym; for trainers, only allow plans from their gym
         if current_user.role == UserRole.ADMIN:
             plan = session.exec( select( Plan ).where( Plan.id == plan_id, Plan.is_active == True ) ).first()
         else:
@@ -422,9 +421,16 @@ def update_user(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Plan no encontrado, inactivo o no disponible en este gimnasio"
             )
+
+        active_plan = get_last_plan( db_user )
+
+        if active_plan and active_plan.plan_id == plan.id:
+            raise HTTPException(
+                status_code = status.HTTP_400_BAD_REQUEST,
+                detail      = "El usuario ya tiene este plan activo"
+            )
         
-        # Create user plan
-        expires_at = datetime.now(pytz.timezone('America/Bogota')) + timedelta(days=plan.duration_days)
+        expires_at = datetime.now( pytz.timezone( 'America/Bogota' ) ) + timedelta( days = plan.duration_days )
         
         user_plan = UserPlan(
             user_id=db_user.id,

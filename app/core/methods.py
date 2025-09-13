@@ -23,6 +23,7 @@ def get_last_plan( user: User ) -> UserPlanRead:
             
         # Ensure expires_at is timezone-aware
         expires_at = up.expires_at
+        
         if expires_at.tzinfo is None:
             # If timezone-naive, assume UTC
             expires_at = expires_at.replace( tzinfo = pytz.timezone( 'America/Bogota' ) )
