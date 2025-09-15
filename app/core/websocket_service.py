@@ -2,10 +2,6 @@ from fastapi import WebSocket
 from typing import Dict
 import json
 from datetime import datetime
-
-import pytz
-from sqlmodel import Session, select
-
 from app.models.user import User
 
 class WebSocketService:

@@ -38,7 +38,6 @@ def get_current_user( token: str ):
 
 @router.websocket( "/user/{token}" )
 async def websocket_user_endpoint( websocket: WebSocket, token: str ):
-
     if not token:
         await websocket_service.send_message( websocket, {
             "type": "error",
@@ -92,6 +91,8 @@ async def websocket_user_endpoint( websocket: WebSocket, token: str ):
     except WebSocketDisconnect:
         websocket_service.disconnect( websocket )
 
+user_ids = dict[ str, str ]
+
 @router.websocket( "/gym" )
 async def websocket_gym_endpoint( websocket: WebSocket ):
     headers = dict( websocket.headers )
@@ -110,18 +111,19 @@ async def websocket_gym_endpoint( websocket: WebSocket ):
 
     await websocket_service.connect( websocket, None, user.gym_id )
 
+    user_ids[ user.gym_id ] = None
+
     try:
         last_index = 0
-        user_id = None
 
         while True:
             data = await websocket.receive_text()
 
-            if user_id:
-                user_websocket = await websocket_service.get_user_connection( user_id )
+            if user_ids[ user.gym_id ]:
+                user_websocket = await websocket_service.get_user_connection( user_ids[ user.gym_id ] )
 
                 if not user_websocket:
-                    await websocket_service.send_message( user_websocket, {
+                    await websocket_service.send_message( websocket, {
                         "type": "error",
                         "error": "No se encontró la conexión del usuario"
                     } )
