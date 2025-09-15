@@ -13,6 +13,7 @@ from app.core.websocket_service import websocket_service
 from app.core.encryption_service import encryption_service
 from app.models.enums import UserRole
 from app.models.user import User
+from typing import Dict
 
 router = APIRouter()
 
@@ -89,7 +90,7 @@ async def websocket_user_endpoint( websocket: WebSocket, token: str ):
     except WebSocketDisconnect:
         websocket_service.disconnect( websocket )
 
-user_ids = dict[ str, str ]
+user_ids: Dict[ str, str ] = {}
 
 @router.websocket( "/gym" )
 async def websocket_gym_endpoint( websocket: WebSocket ):
