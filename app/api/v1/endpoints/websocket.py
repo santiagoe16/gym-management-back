@@ -54,8 +54,6 @@ async def websocket_user_endpoint( websocket: WebSocket, token: str ):
         while True:
             data = await websocket.receive_text()
 
-            print( data )
-
             gym_websocket = await websocket_service.get_gym_connection( user.gym_id )
 
             if not gym_websocket:
@@ -111,7 +109,7 @@ async def websocket_gym_endpoint( websocket: WebSocket ):
 
     await websocket_service.connect( websocket, None, user.gym_id )
 
-    user_ids[ user.gym_id ] = None
+    user_ids[ user.gym_id ] = ""
 
     try:
         last_index = 0
@@ -119,7 +117,7 @@ async def websocket_gym_endpoint( websocket: WebSocket ):
         while True:
             data = await websocket.receive_text()
 
-            if user_ids[ user.gym_id ]:
+            if user_ids[ user.gym_id ] != "":
                 user_websocket = await websocket_service.get_user_connection( user_ids[ user.gym_id ] )
 
                 if not user_websocket:
@@ -166,9 +164,9 @@ async def websocket_gym_endpoint( websocket: WebSocket ):
                         
                         continue
 
-                    user_id = user.id
+                    user_ids[ user.gym_id ] = user.id
 
-                    user_websocket = await websocket_service.get_user_connection( user_id )
+                    user_websocket = await websocket_service.get_user_connection( user_ids[ user.gym_id ] )
 
                     if not user_websocket:
                         await websocket_service.send_message( user_websocket, {
